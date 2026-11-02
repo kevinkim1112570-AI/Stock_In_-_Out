@@ -185,17 +185,56 @@ textarea { min-height: 110px; resize: vertical; }
   .summary { gap: 16px 36px; }
 }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+/* Live data additions: sign-in screen, header status */
+.top-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.who { color: var(--ink-2); font-size: 15px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--ink-2); }
+.live i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-2); opacity: 0.5; display: inline-block; }
+.live.on i { background: var(--accent); opacity: 1; }
+.auth { min-height: calc(100vh - 100px); display: grid; place-items: center; }
+.auth-card { width: min(440px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 32px; display: flex; flex-direction: column; gap: 20px; }
+.auth-card h1 { font-size: 30px; }
+.auth .hint { margin: 0; color: var(--ink-2); font-size: 15px; }
+.drawer-foot { flex-wrap: wrap; }
+.drawer-foot .err { flex: 1 1 100%; text-align: right; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+@media (max-width: 560px) { .auth-card { padding: 24px 20px; } }
 </style>
 </head>
 <body>
+<div class="auth" id="auth" hidden>
+  <form class="auth-card" id="authForm" novalidate>
+    <div>
+      <h1>Stock In/Out List</h1>
+      <p class="sub">Sign in with your team email.</p>
+    </div>
+    <div class="field">
+      <label for="a-email">Email</label>
+      <input id="a-email" type="email" autocomplete="username" inputmode="email">
+    </div>
+    <div class="field">
+      <label for="a-pass">Password</label>
+      <input id="a-pass" type="password" autocomplete="current-password">
+    </div>
+    <p class="err" id="authErr" role="alert"></p>
+    <button type="submit" class="btn primary" id="authBtn">Sign in</button>
+    <p class="hint">Need access? Ask your admin to add your email.</p>
+  </form>
+</div>
 
-<div class="wrap">
+<div class="wrap" id="app" hidden>
   <header class="top">
     <div>
       <h1>Stock In/Out List</h1>
-      <p class="sub">Every stock-in the team has recorded, saved in this browser.</p>
+      <p class="sub">Every stock-in the team has recorded, shared live.</p>
     </div>
-    <button type="button" class="btn primary" id="addBtn">+ Add Stock-In</button>
+    <div class="top-actions">
+      <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
+      <span class="who" id="who"></span>
+      <button type="button" class="linkbtn" id="signOut">Sign out</button>
+      <button type="button" class="btn primary" id="addBtn">+ Add Stock-In</button>
+    </div>
   </header>
 
   <section class="summary" aria-label="Totals">
@@ -214,12 +253,9 @@ textarea { min-height: 110px; resize: vertical; }
     <select id="statusFilter" aria-label="Filter by latest status"></select>
   </div>
 
-  <div class="note" id="sampleNote" hidden>
-    <span>These rows are examples so you can see how the list works.</span>
-    <button type="button" class="linkbtn" id="clearSamples">Remove examples</button>
-  </div>
-  <div class="note" id="storeNote" hidden>
-    <span>This browser is blocking saved data, so the list will clear when you close the page.</span>
+  <div class="note" id="loadNote" hidden>
+    <span id="loadMsg"></span>
+    <button type="button" class="linkbtn" id="retry">Try again</button>
   </div>
 
   <div class="table-scroll" id="tableWrap">
@@ -257,7 +293,6 @@ textarea { min-height: 110px; resize: vertical; }
       <div class="field">
         <label for="f-code">Category Code</label>
         <input id="f-code" name="categoryCode" autocomplete="off">
-        <span class="err" id="err-categoryCode"></span>
       </div>
       <div class="field">
         <label for="f-brand">Brand Name <span class="req">*</span></label>
@@ -305,6 +340,7 @@ textarea { min-height: 110px; resize: vertical; }
       </div>
     </div>
     <div class="drawer-foot">
+      <span class="err" id="err-form" role="alert"></span>
       <button type="button" class="btn" id="cancelBtn">Cancel</button>
       <button type="submit" class="btn primary" id="saveBtn">Save Stock-In</button>
     </div>
@@ -316,11 +352,16 @@ textarea { min-height: 110px; resize: vertical; }
 <datalist id="dl-people"></datalist>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.75.0/dist/umd/supabase.js"></script>
 <script>
 (function () {
   'use strict';
 
-  var KEY = 'stock-inout-list-v1';
+  /* The publishable key is meant to be public. Row level security in Supabase
+     decides who can read or change data, and only signed-in users are allowed. */
+  var SUPABASE_URL = 'https://mhdxkwmjrquvvzpwolxx.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_7LJzFZ-twiuUF6olOZj0dQ_ygO5jcQm';
+  var TABLE = 'stock_in';
   var STATUSES = ['In stock', 'Reserved', 'Given out', 'Used', 'Damaged'];
   var COLS = [
     { key: 'serial', label: 'Serial No.', cls: 'c-serial' },
@@ -338,53 +379,51 @@ textarea { min-height: 110px; resize: vertical; }
     { key: 'status', label: 'Latest Status' }
   ];
 
-  var SAMPLES = [
-    ['SN-0001', 'Skincare', 'SK', 'Halden Lab', 'Serum 30 ml', 'Mei Lin', '2026-10-06', 'Arjun', 120, 'A-01-1', 'Yes', 'Retail bottles, batch 2610', 'In stock'],
-    ['SN-0002', 'Packaging', 'PK', 'Norvik', 'Gift box, matte', 'Mei Lin', '2026-10-08', 'Arjun', 200, 'B-02-3', 'No', 'Outer boxes for gift sets', 'In stock'],
-    ['SN-0003', 'Skincare', 'SK', 'Halden Lab', 'Serum 10 ml sample', 'Daniel Tan', '2026-10-13', 'Sofia', 300, 'A-01-2', 'Yes', 'Trial size for events and gift sets', 'Reserved'],
-    ['SN-0004', 'Print', 'PT', 'Brightleaf Print', 'Leaflet A5', 'Daniel Tan', '2026-10-15', 'Sofia', 500, 'C-01-1', 'No', 'Usage leaflet, two languages', 'In stock'],
-    ['SN-0005', 'Merchandise', 'MD', 'Kelder', 'Tote bag, canvas grey', 'Mei Lin', '2026-10-20', 'Arjun', 60, 'C-03-2', 'Yes', 'Event giveaway', 'Given out'],
-    ['SN-0006', 'Packaging', 'PK', 'Norvik', 'Dropper bottle 30 ml, empty', 'Daniel Tan', '2026-10-27', 'Sofia', 150, 'B-01-1', 'No', '12 units cracked on arrival, supplier notified', 'Damaged']
-  ];
-
-  var storageOk = true;
-  var state = load();
-  if (!state) {
-    state = { records: SAMPLES.map(function (s, i) {
-      return { id: uid() + i, serial: s[0], category: s[1], categoryCode: s[2], brand: s[3], type: s[4], purchaser: s[5], date: s[6], receiver: s[7], qty: s[8], storage: s[9], giftable: s[10], detail: s[11], status: s[12], sample: true };
-    }) };
-    save();
-  }
-
-  var ui = { q: '', gift: 'all', status: 'all', sortKey: 'date', dir: -1, editingId: null, pendingDelete: null, deleteTimer: null, codeTouched: false };
-
   var $ = function (id) { return document.getElementById(id); };
   var els = {
-    body: $('body'), head: $('headRow'), empty: $('empty'), wrap: $('tableWrap'),
+    body: $('body'), head: $('headRow'), empty: $('empty'),
     q: $('q'), statusFilter: $('statusFilter'), giftFilter: $('giftFilter'),
-    sampleNote: $('sampleNote'), storeNote: $('storeNote'),
     drawer: $('drawer'), scrim: $('scrim'), form: $('form'), title: $('drawerTitle'), saveBtn: $('saveBtn'),
-    toast: $('toast')
+    toast: $('toast'), auth: $('auth'), app: $('app')
   };
 
-  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  var sb = (window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
 
-  function load() {
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (raw) {
-        var d = JSON.parse(raw);
-        if (d && Array.isArray(d.records)) return d;
-      }
-    } catch (e) { storageOk = false; }
-    return null;
+  var state = { records: [] };
+  var ui = {
+    q: '', gift: 'all', status: 'all', sortKey: 'date', dir: -1,
+    editingId: null, pendingDelete: null, deleteTimer: null, codeTouched: false,
+    loading: false, userId: null, channel: null, subscribedOnce: false
+  };
+
+  /* ---------- Data mapping ---------- */
+  function fromRow(r) {
+    return {
+      id: r.id, serial: r.serial_no, category: r.category, categoryCode: r.category_code || '',
+      brand: r.brand_name, type: r.type_expression || '', purchaser: r.purchaser,
+      date: r.date_of_receipt, receiver: r.receiver, qty: r.quantity, storage: r.storage_code,
+      giftable: r.giftable ? 'Yes' : 'No', detail: r.detail || '', status: r.latest_status,
+      createdAt: r.created_at || ''
+    };
   }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); }
-    catch (e) { storageOk = false; }
-    els.storeNote && (els.storeNote.hidden = storageOk);
+  function toRow(d) {
+    return {
+      serial_no: d.serial, category: d.category, category_code: d.categoryCode, brand_name: d.brand,
+      type_expression: d.type, purchaser: d.purchaser, date_of_receipt: d.date, receiver: d.receiver,
+      quantity: d.qty, storage_code: d.storage, giftable: d.giftable === 'Yes', detail: d.detail,
+      latest_status: d.status
+    };
+  }
+  function upsertLocal(rec) {
+    for (var i = 0; i < state.records.length; i++) {
+      if (state.records[i].id === rec.id) { state.records[i] = rec; return; }
+    }
+    state.records.push(rec);
   }
 
+  /* ---------- Helpers ---------- */
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -403,7 +442,12 @@ textarea { min-height: 110px; resize: vertical; }
     els.toast.textContent = msg;
     els.toast.classList.add('show');
     clearTimeout(toast.t);
-    toast.t = setTimeout(function () { els.toast.classList.remove('show'); }, 2400);
+    toast.t = setTimeout(function () { els.toast.classList.remove('show'); }, 2600);
+  }
+  function setLive(mode) {
+    var live = $('live');
+    live.classList.toggle('on', mode === 'live');
+    $('liveText').textContent = mode === 'live' ? 'Live' : (mode === 'off' ? 'Reconnecting' : 'Connecting');
   }
 
   /* ---------- Table ---------- */
@@ -414,7 +458,7 @@ textarea { min-height: 110px; resize: vertical; }
       if (c.plain) h += '<th class="' + cls + '" scope="col">' + c.label + '</th>';
       else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"><button type="button" class="sortbtn" data-sort="' + c.key + '">' + c.label + '<span class="arrow"></span></button></th>';
     });
-    h += '<th class="plain" scope="col"><span class="sr" style="position:absolute;left:-9999px">Actions</span></th>';
+    h += '<th class="plain" scope="col"><span style="position:absolute;left:-9999px">Actions</span></th>';
     els.head.innerHTML = h;
   }
   function paintHead() {
@@ -424,7 +468,6 @@ textarea { min-height: 110px; resize: vertical; }
       th.querySelector('.arrow').textContent = on ? (ui.dir === 1 ? '▲' : '▼') : '';
     });
   }
-
   function cmp(a, b) {
     var k = ui.sortKey, r;
     if (k === 'qty') r = (a.qty || 0) - (b.qty || 0);
@@ -447,7 +490,7 @@ textarea { min-height: 110px; resize: vertical; }
 
   function render() {
     var rows = visible();
-    var html = rows.map(function (r) {
+    els.body.innerHTML = rows.map(function (r) {
       var armed = ui.pendingDelete === r.id;
       return '<tr data-id="' + esc(r.id) + '">' +
         '<td class="c-serial">' + esc(r.serial) + '</td>' +
@@ -467,13 +510,12 @@ textarea { min-height: 110px; resize: vertical; }
         '<button type="button" class="linkbtn' + (armed ? ' danger-arm' : '') + '" data-act="del">' + (armed ? 'Confirm delete' : 'Delete') + '</button></td>' +
         '</tr>';
     }).join('');
-    els.body.innerHTML = html;
 
     if (!rows.length) {
       els.empty.hidden = false;
-      els.empty.innerHTML = state.records.length
-        ? '<b>No stock-in matches</b>Try a different search or clear the filters.'
-        : '<b>No stock recorded yet</b>Use Add Stock-In to record the first one.';
+      if (ui.loading) els.empty.innerHTML = '<b>Loading stock…</b>';
+      else if (state.records.length) els.empty.innerHTML = '<b>No stock-in matches</b>Try a different search or clear the filters.';
+      else els.empty.innerHTML = '<b>No stock recorded yet</b>Use Add Stock-In to record the first one.';
     } else els.empty.hidden = true;
 
     var units = 0, gift = 0;
@@ -481,8 +523,6 @@ textarea { min-height: 110px; resize: vertical; }
     $('sRecords').textContent = state.records.length.toLocaleString('en-US');
     $('sUnits').textContent = units.toLocaleString('en-US');
     $('sGift').textContent = gift.toLocaleString('en-US');
-
-    els.sampleNote.hidden = !state.records.some(function (r) { return r.sample; });
     paintHead();
     refreshLists();
   }
@@ -500,7 +540,7 @@ textarea { min-height: 110px; resize: vertical; }
     $('dl-people').innerHTML = opts(people);
   }
 
-  /* ---------- Filters ---------- */
+  /* ---------- Filters and sorting ---------- */
   function buildStatusFilter() {
     els.statusFilter.innerHTML = '<option value="all">All statuses</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
     $('f-status').innerHTML = STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
@@ -520,16 +560,114 @@ textarea { min-height: 110px; resize: vertical; }
     render();
   });
 
+  /* ---------- Load, realtime ---------- */
+  async function loadAll() {
+    ui.loading = true; $('loadNote').hidden = true; render();
+    var all = [], from = 0, size = 1000;
+    try {
+      for (;;) {
+        var res = await sb.from(TABLE).select('*')
+          .order('date_of_receipt', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(from, from + size - 1);
+        if (res.error) throw res.error;
+        all = all.concat(res.data);
+        if (res.data.length < size) break;
+        from += size;
+      }
+      state.records = all.map(fromRow);
+    } catch (e) {
+      $('loadMsg').textContent = 'Could not load the stock list. Check your connection and try again.';
+      $('loadNote').hidden = false;
+    }
+    ui.loading = false; render();
+  }
+  $('retry').addEventListener('click', loadAll);
+
+  function onChange(payload) {
+    if (payload.eventType === 'DELETE') {
+      var id = payload.old && payload.old.id;
+      state.records = state.records.filter(function (r) { return r.id !== id; });
+    } else if (payload.new) {
+      upsertLocal(fromRow(payload.new));
+    }
+    render();
+  }
+  function subscribe() {
+    unsubscribe();
+    setLive('connecting');
+    ui.channel = sb.channel('stock-in-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, onChange)
+      .subscribe(function (status) {
+        if (status === 'SUBSCRIBED') {
+          setLive('live');
+          if (ui.subscribedOnce) loadAll();
+          ui.subscribedOnce = true;
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setLive('off');
+        }
+      });
+  }
+  function unsubscribe() {
+    if (ui.channel) { sb.removeChannel(ui.channel); ui.channel = null; }
+    ui.subscribedOnce = false;
+  }
+
+  /* ---------- Sign in and out ---------- */
+  function showApp() { els.auth.hidden = true; els.app.hidden = false; }
+  function showAuth() {
+    els.drawer.hidden = true; els.scrim.hidden = true;
+    els.app.hidden = true; els.auth.hidden = false;
+    setTimeout(function () { $('a-email').focus(); }, 0);
+  }
+  async function handleSession(session) {
+    if (session && session.user) {
+      $('who').textContent = session.user.email || '';
+      if (ui.userId !== session.user.id) {
+        ui.userId = session.user.id;
+        showApp();
+        subscribe();
+        await loadAll();
+      }
+    } else {
+      ui.userId = null;
+      unsubscribe();
+      state.records = [];
+      showAuth();
+    }
+  }
+
+  $('authForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = $('authErr'); err.textContent = '';
+    if (!sb) { err.textContent = 'The sign-in service did not load. Check your connection and reload the page.'; return; }
+    var email = $('a-email').value.trim(), pw = $('a-pass').value;
+    if (!email || !pw) { err.textContent = 'Enter your email and password.'; return; }
+    var btn = $('authBtn'); btn.disabled = true; btn.textContent = 'Signing in…';
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    btn.disabled = false; btn.textContent = 'Sign in';
+    if (res.error) {
+      err.textContent = /invalid|credentials/i.test(res.error.message || '')
+        ? 'Email or password is incorrect.'
+        : 'Could not sign in. Check your connection and try again.';
+      return;
+    }
+    $('a-pass').value = '';
+  });
+  $('signOut').addEventListener('click', async function () { if (sb) await sb.auth.signOut(); });
+
   /* ---------- Row actions ---------- */
-  els.body.addEventListener('click', function (e) {
+  els.body.addEventListener('click', async function (e) {
     var b = e.target.closest('button[data-act]'); if (!b) return;
     var id = b.closest('tr').getAttribute('data-id');
     if (b.getAttribute('data-act') === 'edit') { openForm(id); return; }
     if (ui.pendingDelete === id) {
       clearTimeout(ui.deleteTimer);
       ui.pendingDelete = null;
+      var res = await sb.from(TABLE).delete().eq('id', id);
+      if (res.error) { toast('Could not delete. Try again.'); render(); return; }
       state.records = state.records.filter(function (r) { return r.id !== id; });
-      save(); render(); toast('Stock-in deleted');
+      render(); toast('Stock-in deleted');
     } else {
       ui.pendingDelete = id;
       clearTimeout(ui.deleteTimer);
@@ -537,14 +675,11 @@ textarea { min-height: 110px; resize: vertical; }
       render();
     }
   });
-  $('clearSamples').addEventListener('click', function () {
-    state.records = state.records.filter(function (r) { return !r.sample; });
-    save(); render(); toast('Examples removed');
-  });
 
   /* ---------- Form ---------- */
   function nextSerial() {
-    var last = state.records[state.records.length - 1];
+    var last = null;
+    state.records.forEach(function (r) { if (!last || r.createdAt > last.createdAt) last = r; });
     if (!last) return 'SN-0001';
     var m = /^(.*?)(\d+)$/.exec(String(last.serial));
     if (!m) return '';
@@ -589,7 +724,13 @@ textarea { min-height: 110px; resize: vertical; }
     $('f-code').value = match ? match.categoryCode : '';
   });
 
-  els.form.addEventListener('submit', function (e) {
+  function showSerialError(msg) {
+    $('err-serial').textContent = msg;
+    $('f-serial').setAttribute('aria-invalid', 'true');
+    $('f-serial').focus();
+  }
+
+  els.form.addEventListener('submit', async function (e) {
     e.preventDefault();
     clearErrors();
     var d = {
@@ -617,17 +758,26 @@ textarea { min-height: 110px; resize: vertical; }
       $(idMap[keys[0]]).focus();
       return;
     }
-    if (ui.editingId) {
-      var r = state.records.filter(function (x) { return x.id === ui.editingId; })[0];
-      Object.keys(d).forEach(function (k) { r[k] = d[k]; });
-      delete r.sample;
-      toast('Changes saved');
-    } else {
-      d.id = uid();
-      state.records.push(d);
-      toast('Stock-in added');
+
+    var editing = !!ui.editingId, label = els.saveBtn.textContent;
+    els.saveBtn.disabled = true; els.saveBtn.textContent = 'Saving…';
+    var row = toRow(d), res;
+    try {
+      res = editing
+        ? await sb.from(TABLE).update(row).eq('id', ui.editingId).select().single()
+        : await sb.from(TABLE).insert(row).select().single();
+    } catch (ex) {
+      res = { error: { message: String(ex) } };
     }
-    save(); render(); closeForm();
+    els.saveBtn.disabled = false; els.saveBtn.textContent = label;
+    if (res.error) {
+      if (res.error.code === '23505') showSerialError('This serial number is already in the list.');
+      else $('err-form').textContent = 'Could not save. Check your connection and try again.';
+      return;
+    }
+    upsertLocal(fromRow(res.data));
+    toast(editing ? 'Changes saved' : 'Stock-in added');
+    render(); closeForm();
   });
 
   $('addBtn').addEventListener('click', function () { openForm(null); });
@@ -636,10 +786,20 @@ textarea { min-height: 110px; resize: vertical; }
   els.scrim.addEventListener('click', closeForm);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.drawer.hidden) closeForm(); });
 
+  /* ---------- Start ---------- */
   buildHead();
   buildStatusFilter();
-  els.storeNote.hidden = storageOk;
   render();
+  if (!sb) {
+    showAuth();
+    $('authErr').textContent = 'The sign-in service did not load. Check your connection and reload the page.';
+    $('authBtn').disabled = true;
+  } else {
+    sb.auth.onAuthStateChange(function (event, session) {
+      /* Run outside the callback so Supabase calls inside it cannot deadlock. */
+      setTimeout(function () { handleSession(session); }, 0);
+    });
+  }
 })();
 </script>
 </body>
