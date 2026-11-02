@@ -261,12 +261,13 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
 
   <div class="toolbar">
     <div class="search"><input type="search" id="q" placeholder="Search serial no., brand, receiver, storage code…" aria-label="Search stock list"></div>
-    <div class="chip-group" role="group" aria-label="Giftable filter" id="giftFilter">
-      <button type="button" data-v="all" aria-pressed="true">All</button>
-      <button type="button" data-v="Yes" aria-pressed="false">Giftable</button>
-      <button type="button" data-v="No" aria-pressed="false">Not giftable</button>
-      <button type="button" data-v="Unknown" aria-pressed="false">Unknown</button>
-    </div>
+    <select id="categoryFilter" aria-label="Filter by category"></select>
+    <select id="giftFilter" aria-label="Filter by giftable">
+      <option value="all">All giftable</option>
+      <option value="Yes">Giftable: Yes</option>
+      <option value="No">Giftable: No</option>
+      <option value="Unknown">Giftable: Unknown</option>
+    </select>
     <select id="statusFilter" aria-label="Filter by latest status"></select>
   </div>
 
@@ -414,7 +415,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
   var $ = function (id) { return document.getElementById(id); };
   var els = {
     body: $('body'), head: $('headRow'), empty: $('empty'),
-    q: $('q'), statusFilter: $('statusFilter'), giftFilter: $('giftFilter'),
+    q: $('q'), statusFilter: $('statusFilter'), giftFilter: $('giftFilter'), categoryFilter: $('categoryFilter'),
     drawer: $('drawer'), scrim: $('scrim'), form: $('form'), title: $('drawerTitle'), saveBtn: $('saveBtn'),
     toast: $('toast'), auth: $('auth'), app: $('app')
   };
@@ -425,7 +426,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
 
   var state = { records: [] };
   var ui = {
-    q: '', gift: 'all', status: 'all', sortKey: 'date', dir: -1,
+    q: '', gift: 'all', status: 'all', category: 'all', sortKey: 'date', dir: -1,
     editingId: null, pendingDelete: null, deleteTimer: null,
     loading: false, userId: null, channel: null, subscribedOnce: false
   };
@@ -510,6 +511,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
   function visible() {
     var q = ui.q.trim().toLowerCase();
     return state.records.filter(function (r) {
+      if (ui.category !== 'all' && r.category !== ui.category) return false;
       if (ui.gift !== 'all' && r.giftable !== ui.gift) return false;
       if (ui.status !== 'all' && r.status !== ui.status) return false;
       if (q) {
@@ -526,7 +528,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       var armed = ui.pendingDelete === r.id;
       return '<tr data-id="' + esc(r.id) + '">' +
         '<td class="c-serial">' + esc(r.serial) + '</td>' +
-        '<td>' + esc(r.category) + '</td>' +
+        '<td class="nowrap">' + esc(r.category) + '</td>' +
         '<td class="mono">' + esc(r.categoryCode) + '</td>' +
         '<td>' + esc(r.brand) + '</td>' +
         '<td>' + esc(r.type) + '</td>' +
@@ -570,17 +572,14 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
 
   /* ---------- Filters and sorting ---------- */
   function buildStatusFilter() {
+    els.categoryFilter.innerHTML = '<option value="all">All categories</option>' + CATEGORIES.map(function (c) { return '<option value="' + c.name + '">' + c.name + '</option>'; }).join('');
     els.statusFilter.innerHTML = '<option value="all">All statuses</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
     $('f-status').innerHTML = STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
   }
   els.q.addEventListener('input', function () { ui.q = els.q.value; render(); });
   els.statusFilter.addEventListener('change', function () { ui.status = els.statusFilter.value; render(); });
-  els.giftFilter.addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-v]'); if (!b) return;
-    ui.gift = b.getAttribute('data-v');
-    Array.prototype.forEach.call(els.giftFilter.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-    render();
-  });
+  els.giftFilter.addEventListener('change', function () { ui.gift = els.giftFilter.value; render(); });
+  els.categoryFilter.addEventListener('change', function () { ui.category = els.categoryFilter.value; render(); });
   els.head.addEventListener('click', function (e) {
     var b = e.target.closest('button[data-sort]'); if (!b) return;
     var k = b.getAttribute('data-sort');
