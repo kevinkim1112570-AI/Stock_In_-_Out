@@ -200,26 +200,35 @@ textarea { min-height: 110px; resize: vertical; }
 .drawer-foot .err { flex: 1 1 100%; text-align: right; }
 .btn:disabled { opacity: 0.6; cursor: default; }
 @media (max-width: 560px) { .auth-card { padding: 24px 20px; } }
+.auth-card h1 { font-size: 28px; text-wrap: balance; }
+.auth-card .help { color: var(--ink-2); font-size: 15px; margin-top: -2px; }
+.auth-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.ok { margin: 0; font-size: 15px; color: var(--ink); }
+.ok:empty { display: none; }
 </style>
 </head>
 <body>
 <div class="auth" id="auth" hidden>
   <form class="auth-card" id="authForm" novalidate>
     <div>
-      <h1>Stock In/Out List</h1>
-      <p class="sub">Sign in with your team email.</p>
+      <h1>Sign in to your team stock list</h1>
+      <p class="sub">Use your team email. New here? Create an account with the same fields.</p>
     </div>
     <div class="field">
       <label for="a-email">Email</label>
-      <input id="a-email" type="email" autocomplete="username" inputmode="email">
+      <input id="a-email" type="email" placeholder="name@company.com" autocomplete="username" inputmode="email">
     </div>
     <div class="field">
       <label for="a-pass">Password</label>
-      <input id="a-pass" type="password" autocomplete="current-password">
+      <span class="help" id="a-help">6 or more characters</span>
+      <input id="a-pass" type="password" autocomplete="current-password" aria-describedby="a-help">
     </div>
     <p class="err" id="authErr" role="alert"></p>
-    <button type="submit" class="btn primary" id="authBtn">Sign in</button>
-    <p class="hint">Need access? Ask your admin to add your email.</p>
+    <p class="ok" id="authOk" role="status"></p>
+    <div class="auth-actions">
+      <button type="button" class="btn" id="signUpBtn">Create account</button>
+      <button type="submit" class="btn primary" id="authBtn">Sign in</button>
+    </div>
   </form>
 </div>
 
@@ -639,7 +648,7 @@ textarea { min-height: 110px; resize: vertical; }
 
   $('authForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    var err = $('authErr'); err.textContent = '';
+    var err = $('authErr'); err.textContent = ''; $('authOk').textContent = '';
     if (!sb) { err.textContent = 'The sign-in service did not load. Check your connection and reload the page.'; return; }
     var email = $('a-email').value.trim(), pw = $('a-pass').value;
     if (!email || !pw) { err.textContent = 'Enter your email and password.'; return; }
@@ -647,12 +656,39 @@ textarea { min-height: 110px; resize: vertical; }
     var res = await sb.auth.signInWithPassword({ email: email, password: pw });
     btn.disabled = false; btn.textContent = 'Sign in';
     if (res.error) {
-      err.textContent = /invalid|credentials/i.test(res.error.message || '')
-        ? 'Email or password is incorrect.'
-        : 'Could not sign in. Check your connection and try again.';
+      var m = res.error.message || '';
+      err.textContent = /not confirmed/i.test(m)
+        ? 'Confirm your email first. Open the link we sent you, then sign in.'
+        : /invalid|credentials/i.test(m)
+          ? 'Email or password is incorrect.'
+          : 'Could not sign in. Check your connection and try again.';
       return;
     }
     $('a-pass').value = '';
+  });
+  $('signUpBtn').addEventListener('click', async function () {
+    var err = $('authErr'), ok = $('authOk'); err.textContent = ''; ok.textContent = '';
+    if (!sb) { err.textContent = 'The sign-in service did not load. Check your connection and reload the page.'; return; }
+    var email = $('a-email').value.trim(), pw = $('a-pass').value;
+    if (!email || !pw) { err.textContent = 'Enter your email and password.'; return; }
+    if (pw.length < 6) { err.textContent = 'Use a password with 6 or more characters.'; return; }
+    var up = $('signUpBtn'), inn = $('authBtn');
+    up.disabled = true; inn.disabled = true; up.textContent = 'Creating…';
+    var res = await sb.auth.signUp({ email: email, password: pw, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
+    up.disabled = false; inn.disabled = false; up.textContent = 'Create account';
+    if (res.error) {
+      var m = res.error.message || '';
+      err.textContent = /already/i.test(m) ? 'This email already has an account. Use Sign in.'
+        : /rate limit|too many/i.test(m) ? 'Too many attempts. Wait a few minutes and try again.'
+        : /password/i.test(m) ? 'Choose a stronger password with 6 or more characters.'
+        : /valid email|invalid email/i.test(m) ? 'Enter a valid email address.'
+        : 'Could not create the account. Check your connection and try again.';
+      return;
+    }
+    var user = res.data && res.data.user;
+    if (res.data && res.data.session) { $('a-pass').value = ''; return; }
+    if (user && user.identities && user.identities.length === 0) { err.textContent = 'This email already has an account. Use Sign in.'; return; }
+    ok.textContent = 'Account created. Check your email for a confirmation link, then sign in.';
   });
   $('signOut').addEventListener('click', async function () { if (sb) await sb.auth.signOut(); });
 
@@ -793,7 +829,7 @@ textarea { min-height: 110px; resize: vertical; }
   if (!sb) {
     showAuth();
     $('authErr').textContent = 'The sign-in service did not load. Check your connection and reload the page.';
-    $('authBtn').disabled = true;
+    $('authBtn').disabled = true; $('signUpBtn').disabled = true;
   } else {
     sb.auth.onAuthStateChange(function (event, session) {
       /* Run outside the callback so Supabase calls inside it cannot deadlock. */

@@ -2,7 +2,7 @@
 
 A shared stock register for the team. Sign in, then record every stock-in with serial no., category, category code, brand, type/expression, purchaser, date of receipt, receiver, quantity, storage code, giftable, detail and latest status. Search, filter and sort the table, and edit or delete rows. Changes appear on everyone's screen as they happen.
 
-Data lives in a Supabase table (`stock_in`). Only signed-in team members can read or change it.
+Data lives in a Supabase table (`stock_in`). Only signed-in people can read or change it.
 
 ## Files
 
@@ -13,16 +13,17 @@ Data lives in a Supabase table (`stock_in`). Only signed-in team members can rea
 | `vercel.json` | Vercel settings: static site, no build step, basic security headers |
 | `.gitignore` | Keeps local and Vercel folders out of Git |
 
-## Add teammates
+## Accounts
 
-There is no sign-up screen. Add each person in Supabase:
+The login screen has **Sign in** and **Create account** buttons. A new account needs an email and a password of 6 or more characters.
 
-1. Open the project in the Supabase dashboard.
-2. Go to **Authentication → Users → Add user → Create new user**.
-3. Enter their email and a password, and tick **Auto Confirm User**.
-4. Send them the site link and their password.
+Supabase settings that control sign-up (Authentication in the Supabase dashboard):
 
-To stop strangers creating their own accounts, go to **Authentication → Sign In / Providers** and turn off **Allow new users to sign up**.
+- **Sign In / Providers → Email → Confirm email**: when on, new people must click a link in their confirmation email before they can sign in. When off, they are signed in straight away.
+- **URL Configuration → Site URL**: set this to your Vercel address so the confirmation link opens the app.
+- **Sign In / Providers → Allow new users to sign up**: turn this off to stop self sign-up. Then add people yourself under **Authentication → Users → Add user**.
+
+Anyone who can create an account can read, add, edit and delete every record. If the site address is shared outside the team, turn off sign-up or restrict it to team emails.
 
 ## Deploy to Vercel
 
