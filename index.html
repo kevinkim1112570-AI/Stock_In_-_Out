@@ -164,10 +164,10 @@ td.actions .linkbtn + .linkbtn { margin-left: 14px; }
 .err { color: var(--accent); font-size: 14.5px; min-height: 0; }
 .err:empty { display: none; }
 textarea { min-height: 110px; resize: vertical; }
-.seg { display: flex; gap: 10px; }
-.seg label { flex: 1; cursor: pointer; }
+.seg { display: flex; gap: 8px; }
+.seg label { flex: 1; min-width: 0; cursor: pointer; }
 .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.seg span { display: block; text-align: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); font-size: 18px; }
+.seg span { display: block; text-align: center; padding: 12px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); font-size: 17px; }
 .seg input:checked + span { border-color: var(--accent); background: var(--accent-tint); font-weight: 600; }
 
 /* Toast */
@@ -209,6 +209,10 @@ textarea { min-height: 110px; resize: vertical; }
 .field .help { color: var(--ink-2); font-size: 14px; }
 input[readonly] { background: var(--hover); color: var(--ink-2); cursor: default; font-family: var(--font-mono); font-size: 17px; }
 input[readonly]:focus { border-color: var(--line); box-shadow: none; }
+.qty-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.qty-row input { min-width: 0; }
+.qty-row input + input { padding-left: 10px; padding-right: 10px; }
+.none { color: var(--ink-2); }
 </style>
 </head>
 <body>
@@ -252,8 +256,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
 
   <section class="summary" aria-label="Totals">
     <div class="stat"><b id="sRecords">0</b><span>Stock-in records</span></div>
-    <div class="stat"><b id="sUnits">0</b><span>Units received</span></div>
-    <div class="stat"><b id="sGift">0</b><span>Giftable units</span></div>
+    <div class="stat"><b id="sGift">0</b><span>Giftable records</span></div>
   </section>
 
   <div class="toolbar">
@@ -262,6 +265,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       <button type="button" data-v="all" aria-pressed="true">All</button>
       <button type="button" data-v="Yes" aria-pressed="false">Giftable</button>
       <button type="button" data-v="No" aria-pressed="false">Not giftable</button>
+      <button type="button" data-v="Unknown" aria-pressed="false">Unknown</button>
     </div>
     <select id="statusFilter" aria-label="Filter by latest status"></select>
   </div>
@@ -317,7 +321,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       </div>
       <div class="field">
         <label for="f-brand">Brand Name <span class="req">*</span></label>
-        <input id="f-brand" name="brand" list="dl-brand" autocomplete="off">
+        <input id="f-brand" name="brand" autocomplete="off">
         <span class="err" id="err-brand"></span>
       </div>
       <div class="field">
@@ -336,19 +340,24 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       </div>
       <div class="field">
         <label for="f-qty">Quantity <span class="req">*</span></label>
-        <input id="f-qty" name="qty" type="number" min="1" step="1" inputmode="numeric">
+        <div class="qty-row">
+          <input id="f-qty" name="qty" type="number" min="1" step="1" inputmode="numeric" aria-describedby="h-qty err-qty">
+          <input id="f-unit" name="unit" autocomplete="off" placeholder="Unit" aria-label="Unit" aria-describedby="h-qty">
+        </div>
+        <span class="help" id="h-qty">Unit, such as 个, 包, 罐, 套, 片</span>
         <span class="err" id="err-qty"></span>
       </div>
       <div class="field">
-        <label for="f-storage">Storage Code <span class="req">*</span></label>
-        <input id="f-storage" name="storage" autocomplete="off">
-        <span class="err" id="err-storage"></span>
+        <label for="f-storage">Storage Code</label>
+        <input id="f-storage" name="storage" autocomplete="off" aria-describedby="h-storage">
+        <span class="help" id="h-storage">Leave empty if the item has no storage</span>
       </div>
       <div class="field">
         <span class="lbl" id="lbl-gift">Giftable</span>
         <div class="seg" role="radiogroup" aria-labelledby="lbl-gift">
           <label><input type="radio" name="giftable" value="Yes"><span>Yes</span></label>
-          <label><input type="radio" name="giftable" value="No" checked><span>No</span></label>
+          <label><input type="radio" name="giftable" value="No"><span>No</span></label>
+          <label><input type="radio" name="giftable" value="Unknown" checked><span>Unknown</span></label>
         </div>
       </div>
       <div class="field">
@@ -368,7 +377,6 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
   </form>
 </aside>
 
-<datalist id="dl-brand"></datalist>
 <datalist id="dl-people"></datalist>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -427,8 +435,8 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
     return {
       id: r.id, serial: r.serial_no, category: r.category, categoryCode: r.category_code || '',
       brand: r.brand_name, type: r.type_expression || '', purchaser: r.purchaser,
-      date: r.date_of_receipt, receiver: r.receiver, qty: r.quantity, storage: r.storage_code,
-      giftable: r.giftable ? 'Yes' : 'No', detail: r.detail || '', status: r.latest_status,
+      date: r.date_of_receipt, receiver: r.receiver, qty: r.quantity, unit: r.quantity_unit || '', storage: r.storage_code || '',
+      giftable: r.giftable || 'Unknown', detail: r.detail || '', status: r.latest_status,
       createdAt: r.created_at || ''
     };
   }
@@ -436,7 +444,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
     return {
       category: d.category, brand_name: d.brand,
       type_expression: d.type, purchaser: d.purchaser, date_of_receipt: d.date, receiver: d.receiver,
-      quantity: d.qty, storage_code: d.storage, giftable: d.giftable === 'Yes', detail: d.detail,
+      quantity: d.qty, quantity_unit: d.unit, storage_code: d.storage, giftable: d.giftable, detail: d.detail,
       latest_status: d.status
     };
   }
@@ -505,7 +513,7 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       if (ui.gift !== 'all' && r.giftable !== ui.gift) return false;
       if (ui.status !== 'all' && r.status !== ui.status) return false;
       if (q) {
-        var hay = [r.serial, r.category, r.categoryCode, r.brand, r.type, r.purchaser, r.date, r.receiver, r.qty, r.storage, r.giftable, r.detail, r.status].join(' ').toLowerCase();
+        var hay = [r.serial, r.category, r.categoryCode, r.brand, r.type, r.purchaser, r.date, r.receiver, r.qty, r.unit, r.storage, r.giftable, r.detail, r.status].join(' ').toLowerCase();
         if (hay.indexOf(q) === -1) return false;
       }
       return true;
@@ -525,8 +533,8 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
         '<td>' + esc(r.purchaser) + '</td>' +
         '<td class="nowrap">' + fmtDate(r.date) + '</td>' +
         '<td>' + esc(r.receiver) + '</td>' +
-        '<td class="num">' + esc(r.qty) + '</td>' +
-        '<td class="mono">' + esc(r.storage) + '</td>' +
+        '<td class="num">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
+        '<td class="mono">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>' +
         '<td class="' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
         '<td class="detail"><span>' + esc(r.detail) + '</span></td>' +
         '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>' +
@@ -542,10 +550,8 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       else els.empty.innerHTML = '<b>No stock recorded yet</b>Use Add Stock-In to record the first one.';
     } else els.empty.hidden = true;
 
-    var units = 0, gift = 0;
-    state.records.forEach(function (r) { var n = Number(r.qty) || 0; units += n; if (r.giftable === 'Yes') gift += n; });
+    var gift = state.records.filter(function (r) { return r.giftable === 'Yes'; }).length;
     $('sRecords').textContent = state.records.length.toLocaleString('en-US');
-    $('sUnits').textContent = units.toLocaleString('en-US');
     $('sGift').textContent = gift.toLocaleString('en-US');
     paintHead();
     refreshLists();
@@ -558,7 +564,6 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       return out.sort();
     }
     function opts(arr) { return arr.map(function (v) { return '<option value="' + esc(v) + '">'; }).join(''); }
-    $('dl-brand').innerHTML = opts(uniq('brand'));
     var people = uniq('purchaser').concat(uniq('receiver')).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
     $('dl-people').innerHTML = opts(people);
   }
@@ -776,10 +781,11 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
     setVal('f-purchaser', r ? r.purchaser : '');
     setVal('f-receiver', r ? r.receiver : '');
     setVal('f-qty', r ? r.qty : '');
+    setVal('f-unit', r ? r.unit : '');
     setVal('f-storage', r ? r.storage : '');
     setVal('f-detail', r ? r.detail : '');
     setVal('f-status', r ? r.status : 'In stock');
-    var g = r ? r.giftable : 'No';
+    var g = r ? r.giftable : 'Unknown';
     Array.prototype.forEach.call(els.form.querySelectorAll('input[name="giftable"]'), function (x) { x.checked = x.value === g; });
     els.scrim.hidden = false; els.drawer.hidden = false;
     setTimeout(function () { $('f-category').focus(); }, 0);
@@ -795,8 +801,8 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
       date: $('f-date').value, category: $('f-category').value,
       brand: $('f-brand').value.trim(), type: $('f-type').value.trim(),
       purchaser: $('f-purchaser').value.trim(), receiver: $('f-receiver').value.trim(),
-      qty: parseInt($('f-qty').value, 10), storage: $('f-storage').value.trim(),
-      giftable: (els.form.querySelector('input[name="giftable"]:checked') || {}).value || 'No',
+      qty: parseInt($('f-qty').value, 10), unit: $('f-unit').value.trim(), storage: $('f-storage').value.trim(),
+      giftable: (els.form.querySelector('input[name="giftable"]:checked') || {}).value || 'Unknown',
       detail: $('f-detail').value.trim(), status: $('f-status').value
     };
     var errs = {};
@@ -806,10 +812,9 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
     if (!d.purchaser) errs.purchaser = 'Enter who bought it.';
     if (!d.receiver) errs.receiver = 'Enter who received it.';
     if (!(d.qty >= 1)) errs.qty = 'Enter a quantity of 1 or more.';
-    if (!d.storage) errs.storage = 'Enter a storage code.';
     var keys = Object.keys(errs);
     if (keys.length) {
-      var idMap = { date: 'f-date', category: 'f-category', brand: 'f-brand', purchaser: 'f-purchaser', receiver: 'f-receiver', qty: 'f-qty', storage: 'f-storage' };
+      var idMap = { date: 'f-date', category: 'f-category', brand: 'f-brand', purchaser: 'f-purchaser', receiver: 'f-receiver', qty: 'f-qty' };
       keys.forEach(function (k) { $('err-' + k).textContent = errs[k]; $(idMap[k]).setAttribute('aria-invalid', 'true'); });
       $(idMap[keys[0]]).focus();
       return;

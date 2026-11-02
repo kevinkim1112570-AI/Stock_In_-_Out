@@ -14,8 +14,9 @@ create table public.stock_in (
   date_of_receipt date not null,
   receiver text not null check (length(btrim(receiver)) > 0),
   quantity integer not null check (quantity >= 1),
-  storage_code text not null check (length(btrim(storage_code)) > 0),
-  giftable boolean not null default false,
+  quantity_unit text not null default '',  -- 个, 包, 罐, 套, 片 ...
+  storage_code text not null default '',   -- optional
+  giftable text not null default 'Unknown' check (giftable in ('Yes', 'No', 'Unknown')),
   detail text not null default '',
   latest_status text not null default 'In stock'
     check (latest_status in ('In stock', 'Reserved', 'Given out', 'Used', 'Damaged')),
