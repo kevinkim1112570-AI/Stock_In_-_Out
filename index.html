@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}</style>
+<title>Stock In/Out List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one wide data table under a toolbar; the add/edit form slides in from the right. */
+:root {
+  --bg: #EDEEEE;
+  --surface: #F7F7F6;
+  --field: #FFFFFF;
+  --ink: #22262A;
+  --ink-2: #5A6067;
+  --line: #D5D8D9;
+  --hover: #E6E8E8;
+  --accent: #D9480F;
+  --accent-ink: #FFFFFF;
+  --accent-tint: #F2DCD1;
+  --shadow: 0 10px 40px rgba(20, 24, 28, 0.18);
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171A; --surface: #1D2023; --field: #17191C; --ink: #E8E9EA; --ink-2: #9AA0A6;
+    --line: #30353A; --hover: #262A2E; --accent: #FF8A4C; --accent-ink: #1C1208; --accent-tint: #3A2A1F;
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171A; --surface: #1D2023; --field: #17191C; --ink: #E8E9EA; --ink-2: #9AA0A6;
+  --line: #30353A; --hover: #262A2E; --accent: #FF8A4C; --accent-ink: #1C1208; --accent-tint: #3A2A1F;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.5;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.top > div { min-width: 0; }
+h1 { margin: 0; font-size: clamp(30px, 5vw, 42px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; text-wrap: balance; }
+.sub { margin: 8px 0 0; color: var(--ink-2); font-size: 18px; }
+
+/* Summary */
+.summary { display: flex; flex-wrap: wrap; gap: 20px 56px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat b { font-size: 34px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.1; }
+.stat span { color: var(--ink-2); font-size: 15px; }
+
+/* Buttons */
+.btn {
+  font: inherit; font-size: 17px; font-weight: 500; cursor: pointer;
+  padding: 12px 22px; border-radius: 6px; border: 1px solid var(--line);
+  background: transparent; color: var(--ink);
+}
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn:focus-visible, .linkbtn:focus-visible, .sortbtn:focus-visible, .seg input:focus-visible + span {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+
+/* Toolbar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.search { flex: 1 1 280px; min-width: 0; }
+input, select, textarea {
+  font: inherit; font-size: 18px; color: var(--ink); background: var(--field);
+  border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; width: 100%;
+}
+select { width: auto; max-width: 100%; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+input::placeholder, textarea::placeholder { color: var(--ink-2); opacity: 0.8; }
+.seg-row { display: flex; gap: 0; }
+.chip-group { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.chip-group button {
+  font: inherit; font-size: 16px; padding: 12px 16px; background: var(--field); color: var(--ink-2);
+  border: 0; border-right: 1px solid var(--line); cursor: pointer;
+}
+.chip-group button:last-child { border-right: 0; }
+.chip-group button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.chip-group button:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+/* Notes */
+.note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 16px; background: var(--accent-tint); border-radius: 6px; font-size: 16px; }
+.note .linkbtn { color: var(--ink); font-weight: 500; }
+.linkbtn { font: inherit; font-size: 16px; background: none; border: 0; padding: 4px 2px; cursor: pointer; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.linkbtn:hover { color: var(--accent); }
+.linkbtn.danger-arm { color: var(--accent); font-weight: 600; }
+
+/* Table */
+.table-scroll { overflow: auto; max-height: 72vh; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1640px; font-size: 17px; }
+th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td { background: var(--surface); }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--hover); }
+thead th { position: sticky; top: 0; z-index: 2; background: var(--hover); padding: 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.sortbtn {
+  font: inherit; font-size: 13.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-2); background: none; border: 0; cursor: pointer; padding: 16px; width: 100%; text-align: left;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.sortbtn:hover { color: var(--ink); }
+.sortbtn .arrow { color: var(--accent); font-size: 12px; }
+th.plain { padding: 16px; font-size: 13.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+th.num, td.num { text-align: right; }
+th.num .sortbtn { justify-content: flex-end; }
+td.num { font-variant-numeric: tabular-nums; font-weight: 500; }
+.mono { font-family: var(--font-mono); font-size: 16px; }
+.c-serial { position: sticky; left: 0; z-index: 1; font-family: var(--font-mono); font-size: 16px; font-weight: 500; white-space: nowrap; border-right: 1px solid var(--line); }
+thead th.c-serial { z-index: 3; left: 0; }
+td.nowrap { white-space: nowrap; }
+td.detail { min-width: 260px; max-width: 320px; color: var(--ink-2); font-size: 16px; }
+td.detail span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+td.actions { white-space: nowrap; text-align: right; }
+td.actions .linkbtn + .linkbtn { margin-left: 14px; }
+.pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; background: var(--hover); font-size: 15px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line); }
+.pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-2); display: inline-block; }
+.pill.in i { background: var(--accent); }
+.gift-yes { font-weight: 600; }
+.gift-no { color: var(--ink-2); }
+
+.empty { padding: 56px 16px; text-align: center; color: var(--ink-2); }
+.empty b { display: block; font-size: 20px; color: var(--ink); font-weight: 500; margin-bottom: 6px; }
+
+/* Drawer */
+.scrim { position: fixed; inset: 0; background: rgba(15, 18, 20, 0.45); z-index: 20; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 21;
+  width: min(680px, 100%); background: var(--surface); box-shadow: var(--shadow);
+  border-left: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.drawer form { height: 100%; display: flex; flex-direction: column; }
+.drawer-head, .drawer-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px max(20px, 4vw); }
+.drawer-head { border-bottom: 1px solid var(--line); }
+.drawer-foot { border-top: 1px solid var(--line); justify-content: flex-end; }
+.drawer-head h2 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.grid { flex: 1; overflow-y: auto; padding: 24px max(20px, 4vw); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 18px; align-content: start; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field.full { grid-column: 1 / -1; }
+.field > label, .field > .lbl { font-size: 15px; font-weight: 500; color: var(--ink-2); }
+.req { color: var(--accent); }
+.err { color: var(--accent); font-size: 14.5px; min-height: 0; }
+.err:empty { display: none; }
+textarea { min-height: 110px; resize: vertical; }
+.seg { display: flex; gap: 10px; }
+.seg label { flex: 1; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg span { display: block; text-align: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); font-size: 18px; }
+.seg input:checked + span { border-color: var(--accent); background: var(--accent-tint); font-weight: 600; }
+
+/* Toast */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 6px; font-size: 16px; z-index: 30;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.toast.show { opacity: 1; }
+
+@media (max-width: 560px) {
+  body { padding-block: 24px 48px; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .stat b { font-size: 30px; }
+  .summary { gap: 16px 36px; }
+}
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Stock In/Out List</h1>
+      <p class="sub">Every stock-in the team has recorded, saved in this browser.</p>
+    </div>
+    <button type="button" class="btn primary" id="addBtn">+ Add Stock-In</button>
+  </header>
+
+  <section class="summary" aria-label="Totals">
+    <div class="stat"><b id="sRecords">0</b><span>Stock-in records</span></div>
+    <div class="stat"><b id="sUnits">0</b><span>Units received</span></div>
+    <div class="stat"><b id="sGift">0</b><span>Giftable units</span></div>
+  </section>
+
+  <div class="toolbar">
+    <div class="search"><input type="search" id="q" placeholder="Search serial no., brand, receiver, storage code…" aria-label="Search stock list"></div>
+    <div class="chip-group" role="group" aria-label="Giftable filter" id="giftFilter">
+      <button type="button" data-v="all" aria-pressed="true">All</button>
+      <button type="button" data-v="Yes" aria-pressed="false">Giftable</button>
+      <button type="button" data-v="No" aria-pressed="false">Not giftable</button>
+    </div>
+    <select id="statusFilter" aria-label="Filter by latest status"></select>
+  </div>
+
+  <div class="note" id="sampleNote" hidden>
+    <span>These rows are examples so you can see how the list works.</span>
+    <button type="button" class="linkbtn" id="clearSamples">Remove examples</button>
+  </div>
+  <div class="note" id="storeNote" hidden>
+    <span>This browser is blocking saved data, so the list will clear when you close the page.</span>
+  </div>
+
+  <div class="table-scroll" id="tableWrap">
+    <table>
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="body"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden></div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden>
+  <form id="form" novalidate>
+    <div class="drawer-head">
+      <h2 id="drawerTitle">Add Stock-In</h2>
+      <button type="button" class="btn" id="closeBtn">Close</button>
+    </div>
+    <div class="grid">
+      <div class="field">
+        <label for="f-serial">Serial No. <span class="req">*</span></label>
+        <input id="f-serial" name="serial" autocomplete="off">
+        <span class="err" id="err-serial"></span>
+      </div>
+      <div class="field">
+        <label for="f-date">Date of Receipt <span class="req">*</span></label>
+        <input id="f-date" name="date" type="date">
+        <span class="err" id="err-date"></span>
+      </div>
+      <div class="field">
+        <label for="f-category">Category <span class="req">*</span></label>
+        <input id="f-category" name="category" list="dl-category" autocomplete="off">
+        <span class="err" id="err-category"></span>
+      </div>
+      <div class="field">
+        <label for="f-code">Category Code</label>
+        <input id="f-code" name="categoryCode" autocomplete="off">
+        <span class="err" id="err-categoryCode"></span>
+      </div>
+      <div class="field">
+        <label for="f-brand">Brand Name <span class="req">*</span></label>
+        <input id="f-brand" name="brand" list="dl-brand" autocomplete="off">
+        <span class="err" id="err-brand"></span>
+      </div>
+      <div class="field">
+        <label for="f-type">Type / Expression</label>
+        <input id="f-type" name="type" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-purchaser">Purchaser <span class="req">*</span></label>
+        <input id="f-purchaser" name="purchaser" list="dl-people" autocomplete="off">
+        <span class="err" id="err-purchaser"></span>
+      </div>
+      <div class="field">
+        <label for="f-receiver">Receiver <span class="req">*</span></label>
+        <input id="f-receiver" name="receiver" list="dl-people" autocomplete="off">
+        <span class="err" id="err-receiver"></span>
+      </div>
+      <div class="field">
+        <label for="f-qty">Quantity <span class="req">*</span></label>
+        <input id="f-qty" name="qty" type="number" min="1" step="1" inputmode="numeric">
+        <span class="err" id="err-qty"></span>
+      </div>
+      <div class="field">
+        <label for="f-storage">Storage Code <span class="req">*</span></label>
+        <input id="f-storage" name="storage" autocomplete="off">
+        <span class="err" id="err-storage"></span>
+      </div>
+      <div class="field">
+        <span class="lbl" id="lbl-gift">Giftable</span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-gift">
+          <label><input type="radio" name="giftable" value="Yes"><span>Yes</span></label>
+          <label><input type="radio" name="giftable" value="No" checked><span>No</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-status">Latest Status</label>
+        <select id="f-status" name="status"></select>
+      </div>
+      <div class="field full">
+        <label for="f-detail">Detail</label>
+        <textarea id="f-detail" name="detail" placeholder="Batch, condition, what it is for"></textarea>
+      </div>
+    </div>
+    <div class="drawer-foot">
+      <button type="button" class="btn" id="cancelBtn">Cancel</button>
+      <button type="submit" class="btn primary" id="saveBtn">Save Stock-In</button>
+    </div>
+  </form>
+</aside>
+
+<datalist id="dl-category"></datalist>
+<datalist id="dl-brand"></datalist>
+<datalist id="dl-people"></datalist>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'stock-inout-list-v1';
+  var STATUSES = ['In stock', 'Reserved', 'Given out', 'Used', 'Damaged'];
+  var COLS = [
+    { key: 'serial', label: 'Serial No.', cls: 'c-serial' },
+    { key: 'category', label: 'Category' },
+    { key: 'categoryCode', label: 'Category Code' },
+    { key: 'brand', label: 'Brand Name' },
+    { key: 'type', label: 'Type / Expression' },
+    { key: 'purchaser', label: 'Purchaser' },
+    { key: 'date', label: 'Date of Receipt' },
+    { key: 'receiver', label: 'Receiver' },
+    { key: 'qty', label: 'Quantity', cls: 'num' },
+    { key: 'storage', label: 'Storage Code' },
+    { key: 'giftable', label: 'Giftable' },
+    { key: 'detail', label: 'Detail', plain: true },
+    { key: 'status', label: 'Latest Status' }
+  ];
+
+  var SAMPLES = [
+    ['SN-0001', 'Skincare', 'SK', 'Halden Lab', 'Serum 30 ml', 'Mei Lin', '2026-10-06', 'Arjun', 120, 'A-01-1', 'Yes', 'Retail bottles, batch 2610', 'In stock'],
+    ['SN-0002', 'Packaging', 'PK', 'Norvik', 'Gift box, matte', 'Mei Lin', '2026-10-08', 'Arjun', 200, 'B-02-3', 'No', 'Outer boxes for gift sets', 'In stock'],
+    ['SN-0003', 'Skincare', 'SK', 'Halden Lab', 'Serum 10 ml sample', 'Daniel Tan', '2026-10-13', 'Sofia', 300, 'A-01-2', 'Yes', 'Trial size for events and gift sets', 'Reserved'],
+    ['SN-0004', 'Print', 'PT', 'Brightleaf Print', 'Leaflet A5', 'Daniel Tan', '2026-10-15', 'Sofia', 500, 'C-01-1', 'No', 'Usage leaflet, two languages', 'In stock'],
+    ['SN-0005', 'Merchandise', 'MD', 'Kelder', 'Tote bag, canvas grey', 'Mei Lin', '2026-10-20', 'Arjun', 60, 'C-03-2', 'Yes', 'Event giveaway', 'Given out'],
+    ['SN-0006', 'Packaging', 'PK', 'Norvik', 'Dropper bottle 30 ml, empty', 'Daniel Tan', '2026-10-27', 'Sofia', 150, 'B-01-1', 'No', '12 units cracked on arrival, supplier notified', 'Damaged']
+  ];
+
+  var storageOk = true;
+  var state = load();
+  if (!state) {
+    state = { records: SAMPLES.map(function (s, i) {
+      return { id: uid() + i, serial: s[0], category: s[1], categoryCode: s[2], brand: s[3], type: s[4], purchaser: s[5], date: s[6], receiver: s[7], qty: s[8], storage: s[9], giftable: s[10], detail: s[11], status: s[12], sample: true };
+    }) };
+    save();
+  }
+
+  var ui = { q: '', gift: 'all', status: 'all', sortKey: 'date', dir: -1, editingId: null, pendingDelete: null, deleteTimer: null, codeTouched: false };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    body: $('body'), head: $('headRow'), empty: $('empty'), wrap: $('tableWrap'),
+    q: $('q'), statusFilter: $('statusFilter'), giftFilter: $('giftFilter'),
+    sampleNote: $('sampleNote'), storeNote: $('storeNote'),
+    drawer: $('drawer'), scrim: $('scrim'), form: $('form'), title: $('drawerTitle'), saveBtn: $('saveBtn'),
+    toast: $('toast')
+  };
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && Array.isArray(d.records)) return d;
+      }
+    } catch (e) { storageOk = false; }
+    return null;
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) { storageOk = false; }
+    els.storeNote && (els.storeNote.hidden = storageOk);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmtDate(s) {
+    var p = String(s || '').split('-').map(Number);
+    if (!p[0]) return esc(s || '');
+    return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function todayISO() {
+    var n = new Date();
+    return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+  }
+  function toast(msg) {
+    els.toast.textContent = msg;
+    els.toast.classList.add('show');
+    clearTimeout(toast.t);
+    toast.t = setTimeout(function () { els.toast.classList.remove('show'); }, 2400);
+  }
+
+  /* ---------- Table ---------- */
+  function buildHead() {
+    var h = '';
+    COLS.forEach(function (c) {
+      var cls = [c.cls || '', c.plain ? 'plain' : ''].join(' ').trim();
+      if (c.plain) h += '<th class="' + cls + '" scope="col">' + c.label + '</th>';
+      else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"><button type="button" class="sortbtn" data-sort="' + c.key + '">' + c.label + '<span class="arrow"></span></button></th>';
+    });
+    h += '<th class="plain" scope="col"><span class="sr" style="position:absolute;left:-9999px">Actions</span></th>';
+    els.head.innerHTML = h;
+  }
+  function paintHead() {
+    Array.prototype.forEach.call(els.head.querySelectorAll('th[data-key]'), function (th) {
+      var on = th.getAttribute('data-key') === ui.sortKey;
+      th.setAttribute('aria-sort', on ? (ui.dir === 1 ? 'ascending' : 'descending') : 'none');
+      th.querySelector('.arrow').textContent = on ? (ui.dir === 1 ? '▲' : '▼') : '';
+    });
+  }
+
+  function cmp(a, b) {
+    var k = ui.sortKey, r;
+    if (k === 'qty') r = (a.qty || 0) - (b.qty || 0);
+    else r = String(a[k] || '').localeCompare(String(b[k] || ''), undefined, { numeric: true, sensitivity: 'base' });
+    if (r === 0) r = String(a.serial).localeCompare(String(b.serial), undefined, { numeric: true });
+    return r * ui.dir;
+  }
+  function visible() {
+    var q = ui.q.trim().toLowerCase();
+    return state.records.filter(function (r) {
+      if (ui.gift !== 'all' && r.giftable !== ui.gift) return false;
+      if (ui.status !== 'all' && r.status !== ui.status) return false;
+      if (q) {
+        var hay = [r.serial, r.category, r.categoryCode, r.brand, r.type, r.purchaser, r.date, r.receiver, r.qty, r.storage, r.giftable, r.detail, r.status].join(' ').toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(cmp);
+  }
+
+  function render() {
+    var rows = visible();
+    var html = rows.map(function (r) {
+      var armed = ui.pendingDelete === r.id;
+      return '<tr data-id="' + esc(r.id) + '">' +
+        '<td class="c-serial">' + esc(r.serial) + '</td>' +
+        '<td>' + esc(r.category) + '</td>' +
+        '<td class="mono">' + esc(r.categoryCode) + '</td>' +
+        '<td>' + esc(r.brand) + '</td>' +
+        '<td>' + esc(r.type) + '</td>' +
+        '<td>' + esc(r.purchaser) + '</td>' +
+        '<td class="nowrap">' + fmtDate(r.date) + '</td>' +
+        '<td>' + esc(r.receiver) + '</td>' +
+        '<td class="num">' + esc(r.qty) + '</td>' +
+        '<td class="mono">' + esc(r.storage) + '</td>' +
+        '<td class="' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
+        '<td class="detail"><span>' + esc(r.detail) + '</span></td>' +
+        '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>' +
+        '<td class="actions"><button type="button" class="linkbtn" data-act="edit">Edit</button>' +
+        '<button type="button" class="linkbtn' + (armed ? ' danger-arm' : '') + '" data-act="del">' + (armed ? 'Confirm delete' : 'Delete') + '</button></td>' +
+        '</tr>';
+    }).join('');
+    els.body.innerHTML = html;
+
+    if (!rows.length) {
+      els.empty.hidden = false;
+      els.empty.innerHTML = state.records.length
+        ? '<b>No stock-in matches</b>Try a different search or clear the filters.'
+        : '<b>No stock recorded yet</b>Use Add Stock-In to record the first one.';
+    } else els.empty.hidden = true;
+
+    var units = 0, gift = 0;
+    state.records.forEach(function (r) { var n = Number(r.qty) || 0; units += n; if (r.giftable === 'Yes') gift += n; });
+    $('sRecords').textContent = state.records.length.toLocaleString('en-US');
+    $('sUnits').textContent = units.toLocaleString('en-US');
+    $('sGift').textContent = gift.toLocaleString('en-US');
+
+    els.sampleNote.hidden = !state.records.some(function (r) { return r.sample; });
+    paintHead();
+    refreshLists();
+  }
+
+  function refreshLists() {
+    function uniq(key) {
+      var seen = {}, out = [];
+      state.records.forEach(function (r) { var v = (r[key] || '').trim(); if (v && !seen[v.toLowerCase()]) { seen[v.toLowerCase()] = 1; out.push(v); } });
+      return out.sort();
+    }
+    function opts(arr) { return arr.map(function (v) { return '<option value="' + esc(v) + '">'; }).join(''); }
+    $('dl-category').innerHTML = opts(uniq('category'));
+    $('dl-brand').innerHTML = opts(uniq('brand'));
+    var people = uniq('purchaser').concat(uniq('receiver')).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
+    $('dl-people').innerHTML = opts(people);
+  }
+
+  /* ---------- Filters ---------- */
+  function buildStatusFilter() {
+    els.statusFilter.innerHTML = '<option value="all">All statuses</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
+    $('f-status').innerHTML = STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
+  }
+  els.q.addEventListener('input', function () { ui.q = els.q.value; render(); });
+  els.statusFilter.addEventListener('change', function () { ui.status = els.statusFilter.value; render(); });
+  els.giftFilter.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-v]'); if (!b) return;
+    ui.gift = b.getAttribute('data-v');
+    Array.prototype.forEach.call(els.giftFilter.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    render();
+  });
+  els.head.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-sort]'); if (!b) return;
+    var k = b.getAttribute('data-sort');
+    if (ui.sortKey === k) ui.dir = -ui.dir; else { ui.sortKey = k; ui.dir = (k === 'date' || k === 'qty') ? -1 : 1; }
+    render();
+  });
+
+  /* ---------- Row actions ---------- */
+  els.body.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-act]'); if (!b) return;
+    var id = b.closest('tr').getAttribute('data-id');
+    if (b.getAttribute('data-act') === 'edit') { openForm(id); return; }
+    if (ui.pendingDelete === id) {
+      clearTimeout(ui.deleteTimer);
+      ui.pendingDelete = null;
+      state.records = state.records.filter(function (r) { return r.id !== id; });
+      save(); render(); toast('Stock-in deleted');
+    } else {
+      ui.pendingDelete = id;
+      clearTimeout(ui.deleteTimer);
+      ui.deleteTimer = setTimeout(function () { ui.pendingDelete = null; render(); }, 3500);
+      render();
+    }
+  });
+  $('clearSamples').addEventListener('click', function () {
+    state.records = state.records.filter(function (r) { return !r.sample; });
+    save(); render(); toast('Examples removed');
+  });
+
+  /* ---------- Form ---------- */
+  function nextSerial() {
+    var last = state.records[state.records.length - 1];
+    if (!last) return 'SN-0001';
+    var m = /^(.*?)(\d+)$/.exec(String(last.serial));
+    if (!m) return '';
+    return m[1] + String(Number(m[2]) + 1).padStart(m[2].length, '0');
+  }
+  function setVal(id, v) { $(id).value = v == null ? '' : v; }
+  function clearErrors() {
+    Array.prototype.forEach.call(els.form.querySelectorAll('.err'), function (s) { s.textContent = ''; });
+    Array.prototype.forEach.call(els.form.querySelectorAll('[aria-invalid]'), function (i) { i.removeAttribute('aria-invalid'); });
+  }
+  function openForm(id) {
+    ui.editingId = id || null;
+    clearErrors();
+    var r = id ? state.records.filter(function (x) { return x.id === id; })[0] : null;
+    els.title.textContent = r ? 'Edit Stock-In' : 'Add Stock-In';
+    els.saveBtn.textContent = r ? 'Save changes' : 'Save Stock-In';
+    setVal('f-serial', r ? r.serial : nextSerial());
+    setVal('f-date', r ? r.date : todayISO());
+    setVal('f-category', r ? r.category : '');
+    setVal('f-code', r ? r.categoryCode : '');
+    setVal('f-brand', r ? r.brand : '');
+    setVal('f-type', r ? r.type : '');
+    setVal('f-purchaser', r ? r.purchaser : '');
+    setVal('f-receiver', r ? r.receiver : '');
+    setVal('f-qty', r ? r.qty : '');
+    setVal('f-storage', r ? r.storage : '');
+    setVal('f-detail', r ? r.detail : '');
+    setVal('f-status', r ? r.status : 'In stock');
+    var g = r ? r.giftable : 'No';
+    Array.prototype.forEach.call(els.form.querySelectorAll('input[name="giftable"]'), function (x) { x.checked = x.value === g; });
+    ui.codeTouched = !!r;
+    els.scrim.hidden = false; els.drawer.hidden = false;
+    setTimeout(function () { $(r ? 'f-serial' : 'f-brand').focus(); }, 0);
+  }
+  function closeForm() { els.drawer.hidden = true; els.scrim.hidden = true; ui.editingId = null; $('addBtn').focus(); }
+
+  $('f-code').addEventListener('input', function () { ui.codeTouched = true; });
+  $('f-category').addEventListener('input', function () {
+    if (ui.codeTouched) return;
+    var v = $('f-category').value.trim().toLowerCase();
+    var match = state.records.filter(function (r) { return r.category.toLowerCase() === v && r.categoryCode; })[0];
+    $('f-code').value = match ? match.categoryCode : '';
+  });
+
+  els.form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearErrors();
+    var d = {
+      serial: $('f-serial').value.trim(), date: $('f-date').value, category: $('f-category').value.trim(),
+      categoryCode: $('f-code').value.trim(), brand: $('f-brand').value.trim(), type: $('f-type').value.trim(),
+      purchaser: $('f-purchaser').value.trim(), receiver: $('f-receiver').value.trim(),
+      qty: parseInt($('f-qty').value, 10), storage: $('f-storage').value.trim(),
+      giftable: (els.form.querySelector('input[name="giftable"]:checked') || {}).value || 'No',
+      detail: $('f-detail').value.trim(), status: $('f-status').value
+    };
+    var errs = {};
+    if (!d.serial) errs.serial = 'Enter a serial number.';
+    else if (state.records.some(function (r) { return r.serial.toLowerCase() === d.serial.toLowerCase() && r.id !== ui.editingId; })) errs.serial = 'This serial number is already in the list.';
+    if (!d.date) errs.date = 'Choose the date of receipt.';
+    if (!d.category) errs.category = 'Enter a category.';
+    if (!d.brand) errs.brand = 'Enter a brand name.';
+    if (!d.purchaser) errs.purchaser = 'Enter who bought it.';
+    if (!d.receiver) errs.receiver = 'Enter who received it.';
+    if (!(d.qty >= 1)) errs.qty = 'Enter a quantity of 1 or more.';
+    if (!d.storage) errs.storage = 'Enter a storage code.';
+    var keys = Object.keys(errs);
+    if (keys.length) {
+      var idMap = { serial: 'f-serial', date: 'f-date', category: 'f-category', brand: 'f-brand', purchaser: 'f-purchaser', receiver: 'f-receiver', qty: 'f-qty', storage: 'f-storage' };
+      keys.forEach(function (k) { $('err-' + k).textContent = errs[k]; $(idMap[k]).setAttribute('aria-invalid', 'true'); });
+      $(idMap[keys[0]]).focus();
+      return;
+    }
+    if (ui.editingId) {
+      var r = state.records.filter(function (x) { return x.id === ui.editingId; })[0];
+      Object.keys(d).forEach(function (k) { r[k] = d[k]; });
+      delete r.sample;
+      toast('Changes saved');
+    } else {
+      d.id = uid();
+      state.records.push(d);
+      toast('Stock-in added');
+    }
+    save(); render(); closeForm();
+  });
+
+  $('addBtn').addEventListener('click', function () { openForm(null); });
+  $('closeBtn').addEventListener('click', closeForm);
+  $('cancelBtn').addEventListener('click', closeForm);
+  els.scrim.addEventListener('click', closeForm);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.drawer.hidden) closeForm(); });
+
+  buildHead();
+  buildStatusFilter();
+  els.storeNote.hidden = storageOk;
+  render();
+})();
+</script>
+</body>
+</html>
