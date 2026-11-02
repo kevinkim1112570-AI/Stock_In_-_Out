@@ -4,6 +4,13 @@ A shared stock register for the team. Sign in, then record every stock-in with s
 
 Data lives in a Supabase table (`stock_in`). Only signed-in people can read or change it.
 
+## Numbering and categories
+
+- **Category** is a dropdown with five choices: 酒类 (LW), 茶类 (TL), 礼品饰品类 (GP), 橙皮类 (OP) and 茶具类 (TW).
+- **Category Code** cannot be typed. It fills in after you pick a category: the prefix plus the next number in that category, for example TL1, TL2, TL3.
+- **Serial No.** is a plain number starting at 1 (the highest existing number plus 1).
+- Both numbers are assigned by the database when you save, so two people adding stock at the same moment never get the same number. Deleting the newest row frees its number for the next one.
+
 ## Files
 
 | File | Purpose |

@@ -205,6 +205,10 @@ textarea { min-height: 110px; resize: vertical; }
 .auth-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
 .ok { margin: 0; font-size: 15px; color: var(--ink); }
 .ok:empty { display: none; }
+.field select { width: 100%; }
+.field .help { color: var(--ink-2); font-size: 14px; }
+input[readonly] { background: var(--hover); color: var(--ink-2); cursor: default; font-family: var(--font-mono); font-size: 17px; }
+input[readonly]:focus { border-color: var(--line); box-shadow: none; }
 </style>
 </head>
 <body>
@@ -285,9 +289,9 @@ textarea { min-height: 110px; resize: vertical; }
     </div>
     <div class="grid">
       <div class="field">
-        <label for="f-serial">Serial No. <span class="req">*</span></label>
-        <input id="f-serial" name="serial" autocomplete="off">
-        <span class="err" id="err-serial"></span>
+        <label for="f-serial">Serial No.</label>
+        <input id="f-serial" name="serial" readonly tabindex="-1" aria-describedby="h-serial">
+        <span class="help" id="h-serial">Assigned automatically</span>
       </div>
       <div class="field">
         <label for="f-date">Date of Receipt <span class="req">*</span></label>
@@ -296,12 +300,20 @@ textarea { min-height: 110px; resize: vertical; }
       </div>
       <div class="field">
         <label for="f-category">Category <span class="req">*</span></label>
-        <input id="f-category" name="category" list="dl-category" autocomplete="off">
+        <select id="f-category" name="category">
+          <option value="">Select a category</option>
+          <option value="酒类">酒类</option>
+          <option value="茶类">茶类</option>
+          <option value="礼品饰品类">礼品饰品类</option>
+          <option value="橙皮类">橙皮类</option>
+          <option value="茶具类">茶具类</option>
+        </select>
         <span class="err" id="err-category"></span>
       </div>
       <div class="field">
         <label for="f-code">Category Code</label>
-        <input id="f-code" name="categoryCode" autocomplete="off">
+        <input id="f-code" name="categoryCode" readonly tabindex="-1" placeholder="Pick a category" aria-describedby="h-code">
+        <span class="help" id="h-code">Filled in automatically</span>
       </div>
       <div class="field">
         <label for="f-brand">Brand Name <span class="req">*</span></label>
@@ -356,7 +368,6 @@ textarea { min-height: 110px; resize: vertical; }
   </form>
 </aside>
 
-<datalist id="dl-category"></datalist>
 <datalist id="dl-brand"></datalist>
 <datalist id="dl-people"></datalist>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -372,6 +383,10 @@ textarea { min-height: 110px; resize: vertical; }
   var SUPABASE_KEY = 'sb_publishable_7LJzFZ-twiuUF6olOZj0dQ_ygO5jcQm';
   var TABLE = 'stock_in';
   var STATUSES = ['In stock', 'Reserved', 'Given out', 'Used', 'Damaged'];
+  var CATEGORIES = [
+    { name: '酒类', code: 'LW' }, { name: '茶类', code: 'TL' }, { name: '礼品饰品类', code: 'GP' },
+    { name: '橙皮类', code: 'OP' }, { name: '茶具类', code: 'TW' }
+  ];
   var COLS = [
     { key: 'serial', label: 'Serial No.', cls: 'c-serial' },
     { key: 'category', label: 'Category' },
@@ -403,7 +418,7 @@ textarea { min-height: 110px; resize: vertical; }
   var state = { records: [] };
   var ui = {
     q: '', gift: 'all', status: 'all', sortKey: 'date', dir: -1,
-    editingId: null, pendingDelete: null, deleteTimer: null, codeTouched: false,
+    editingId: null, pendingDelete: null, deleteTimer: null,
     loading: false, userId: null, channel: null, subscribedOnce: false
   };
 
@@ -419,7 +434,7 @@ textarea { min-height: 110px; resize: vertical; }
   }
   function toRow(d) {
     return {
-      serial_no: d.serial, category: d.category, category_code: d.categoryCode, brand_name: d.brand,
+      category: d.category, brand_name: d.brand,
       type_expression: d.type, purchaser: d.purchaser, date_of_receipt: d.date, receiver: d.receiver,
       quantity: d.qty, storage_code: d.storage, giftable: d.giftable === 'Yes', detail: d.detail,
       latest_status: d.status
@@ -543,7 +558,6 @@ textarea { min-height: 110px; resize: vertical; }
       return out.sort();
     }
     function opts(arr) { return arr.map(function (v) { return '<option value="' + esc(v) + '">'; }).join(''); }
-    $('dl-category').innerHTML = opts(uniq('category'));
     $('dl-brand').innerHTML = opts(uniq('brand'));
     var people = uniq('purchaser').concat(uniq('receiver')).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
     $('dl-people').innerHTML = opts(people);
@@ -601,6 +615,7 @@ textarea { min-height: 110px; resize: vertical; }
       upsertLocal(fromRow(payload.new));
     }
     render();
+    if (!els.drawer.hidden) updatePreview();
   }
   function subscribe() {
     unsubscribe();
@@ -714,12 +729,32 @@ textarea { min-height: 110px; resize: vertical; }
 
   /* ---------- Form ---------- */
   function nextSerial() {
-    var last = null;
-    state.records.forEach(function (r) { if (!last || r.createdAt > last.createdAt) last = r; });
-    if (!last) return 'SN-0001';
-    var m = /^(.*?)(\d+)$/.exec(String(last.serial));
-    if (!m) return '';
-    return m[1] + String(Number(m[2]) + 1).padStart(m[2].length, '0');
+    var max = 0;
+    state.records.forEach(function (r) { var n = Number(r.serial) || 0; if (n > max) max = n; });
+    return String(max + 1);
+  }
+  function prefixFor(cat) {
+    for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].name === cat) return CATEGORIES[i].code;
+    return '';
+  }
+  /* Preview only. The database assigns the real serial number and code when saving. */
+  function previewCode(cat) {
+    var p = prefixFor(cat);
+    if (!p) return '';
+    var editing = ui.editingId ? state.records.filter(function (x) { return x.id === ui.editingId; })[0] : null;
+    if (editing && editing.category === cat) return editing.categoryCode;
+    var max = 0;
+    state.records.forEach(function (r) {
+      if (r.categoryCode && r.categoryCode.indexOf(p) === 0) {
+        var n = parseInt(r.categoryCode.slice(p.length), 10);
+        if (n > max) max = n;
+      }
+    });
+    return p + (max + 1);
+  }
+  function updatePreview() {
+    $('f-code').value = previewCode($('f-category').value);
+    if (!ui.editingId) $('f-serial').value = nextSerial();
   }
   function setVal(id, v) { $(id).value = v == null ? '' : v; }
   function clearErrors() {
@@ -746,42 +781,27 @@ textarea { min-height: 110px; resize: vertical; }
     setVal('f-status', r ? r.status : 'In stock');
     var g = r ? r.giftable : 'No';
     Array.prototype.forEach.call(els.form.querySelectorAll('input[name="giftable"]'), function (x) { x.checked = x.value === g; });
-    ui.codeTouched = !!r;
     els.scrim.hidden = false; els.drawer.hidden = false;
-    setTimeout(function () { $(r ? 'f-serial' : 'f-brand').focus(); }, 0);
+    setTimeout(function () { $('f-category').focus(); }, 0);
   }
   function closeForm() { els.drawer.hidden = true; els.scrim.hidden = true; ui.editingId = null; $('addBtn').focus(); }
 
-  $('f-code').addEventListener('input', function () { ui.codeTouched = true; });
-  $('f-category').addEventListener('input', function () {
-    if (ui.codeTouched) return;
-    var v = $('f-category').value.trim().toLowerCase();
-    var match = state.records.filter(function (r) { return r.category.toLowerCase() === v && r.categoryCode; })[0];
-    $('f-code').value = match ? match.categoryCode : '';
-  });
-
-  function showSerialError(msg) {
-    $('err-serial').textContent = msg;
-    $('f-serial').setAttribute('aria-invalid', 'true');
-    $('f-serial').focus();
-  }
+  $('f-category').addEventListener('change', updatePreview);
 
   els.form.addEventListener('submit', async function (e) {
     e.preventDefault();
     clearErrors();
     var d = {
-      serial: $('f-serial').value.trim(), date: $('f-date').value, category: $('f-category').value.trim(),
-      categoryCode: $('f-code').value.trim(), brand: $('f-brand').value.trim(), type: $('f-type').value.trim(),
+      date: $('f-date').value, category: $('f-category').value,
+      brand: $('f-brand').value.trim(), type: $('f-type').value.trim(),
       purchaser: $('f-purchaser').value.trim(), receiver: $('f-receiver').value.trim(),
       qty: parseInt($('f-qty').value, 10), storage: $('f-storage').value.trim(),
       giftable: (els.form.querySelector('input[name="giftable"]:checked') || {}).value || 'No',
       detail: $('f-detail').value.trim(), status: $('f-status').value
     };
     var errs = {};
-    if (!d.serial) errs.serial = 'Enter a serial number.';
-    else if (state.records.some(function (r) { return r.serial.toLowerCase() === d.serial.toLowerCase() && r.id !== ui.editingId; })) errs.serial = 'This serial number is already in the list.';
     if (!d.date) errs.date = 'Choose the date of receipt.';
-    if (!d.category) errs.category = 'Enter a category.';
+    if (!d.category) errs.category = 'Choose a category.';
     if (!d.brand) errs.brand = 'Enter a brand name.';
     if (!d.purchaser) errs.purchaser = 'Enter who bought it.';
     if (!d.receiver) errs.receiver = 'Enter who received it.';
@@ -789,7 +809,7 @@ textarea { min-height: 110px; resize: vertical; }
     if (!d.storage) errs.storage = 'Enter a storage code.';
     var keys = Object.keys(errs);
     if (keys.length) {
-      var idMap = { serial: 'f-serial', date: 'f-date', category: 'f-category', brand: 'f-brand', purchaser: 'f-purchaser', receiver: 'f-receiver', qty: 'f-qty', storage: 'f-storage' };
+      var idMap = { date: 'f-date', category: 'f-category', brand: 'f-brand', purchaser: 'f-purchaser', receiver: 'f-receiver', qty: 'f-qty', storage: 'f-storage' };
       keys.forEach(function (k) { $('err-' + k).textContent = errs[k]; $(idMap[k]).setAttribute('aria-invalid', 'true'); });
       $(idMap[keys[0]]).focus();
       return;
@@ -807,12 +827,12 @@ textarea { min-height: 110px; resize: vertical; }
     }
     els.saveBtn.disabled = false; els.saveBtn.textContent = label;
     if (res.error) {
-      if (res.error.code === '23505') showSerialError('This serial number is already in the list.');
-      else $('err-form').textContent = 'Could not save. Check your connection and try again.';
+      $('err-form').textContent = 'Could not save. Check your connection and try again.';
       return;
     }
-    upsertLocal(fromRow(res.data));
-    toast(editing ? 'Changes saved' : 'Stock-in added');
+    var saved = fromRow(res.data);
+    upsertLocal(saved);
+    toast(editing ? 'Changes saved' : 'Stock-in added as No. ' + saved.serial + ' (' + saved.categoryCode + ')');
     render(); closeForm();
   });
 
