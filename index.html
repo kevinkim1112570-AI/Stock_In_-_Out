@@ -266,6 +266,7 @@ th.c-brand, td.c-brand { max-width: 210px; }
   .c-cat { left: 60px; }
   .c-code { left: 184px; }
   .c-brand { left: 280px; }
+  body.no-code .c-brand { left: 184px; }
   th.c-brand, td.c-brand { border-right: 1px solid var(--line); }
 }
 /* Copy button: shows on hover in Brand Name, Type / Expression and Detail cells */
@@ -537,6 +538,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     'in': { table: 'stock_in', hash: '', docTitle: 'Stock IN List', title: 'Stock <b class="em">IN</b> List',
       sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Stock-IN-List', sheet: 'Stock IN' },
     'unnumbered': { table: 'stock_in_unnumbered', hash: 'unnumbered', docTitle: 'Unnumbered Stock In List', title: 'Unnumbered Stock <b class="em">In</b> List',
+      hide: ['categoryCode', 'storage', 'giftable'],
       sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Unnumbered-Stock-In-List', sheet: 'Unnumbered Stock In' },
     'out': { table: 'stock_out', hash: 'out', release: true, docTitle: 'Stock OUT List', title: 'Stock <b class="em">OUT</b> List',
       sub: 'Every stock-out the team has recorded, shared live.', noun: 'Stock-Out', file: 'Stock-OUT-List', sheet: 'Stock OUT' }
@@ -639,9 +641,11 @@ td.num { padding-left: 8px; padding-right: 8px; }
   }
 
   /* ---------- Table ---------- */
+  function isHidden(key) { return (LISTS[cur].hide || []).indexOf(key) >= 0; }
   function buildHead() {
     var h = '';
     COLS.forEach(function (c) {
+      if (isHidden(c.key)) return;
       var cls = [c.cls || '', c.plain ? 'plain' : ''].join(' ').trim();
       if (c.plain) h += '<th class="' + cls + '" scope="col">' + c.label + '</th>';
       else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"' + (c.title ? ' title="' + c.title + '"' : '') + '><button type="button" class="sortbtn" data-sort="' + c.key + '"' + (c.title ? ' aria-label="' + c.title + '"' : '') + '>' + c.label + '<span class="arrow"></span></button></th>';
@@ -743,15 +747,15 @@ td.num { padding-left: 8px; padding-right: 8px; }
       return '<tr data-id="' + esc(r.id) + '">' +
         '<td class="c-serial">' + esc(r.serial) + '</td>' +
         '<td class="nowrap c-cat">' + esc(r.category) + '</td>' +
-        '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').replace(/[0-9]+$/, '')) + '</span><span class="cc-n">' + esc((String(r.categoryCode || '').match(/[0-9]+$/) || [''])[0]) + '</span></td>' +
+        (isHidden('categoryCode') ? '' :         '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').replace(/[0-9]+$/, '')) + '</span><span class="cc-n">' + esc((String(r.categoryCode || '').match(/[0-9]+$/) || [''])[0]) + '</span></td>') +
         '<td class="c-brand"><span class="clamp3">' + esc(r.brand) + '</span>' + copyBtn('brand', r.brand) + '</td>' +
         '<td class="c-type"><span class="clamp3">' + esc(r.type) + '</span>' + copyBtn('type', r.type) + '</td>' +
         '<td class="ctr sm">' + esc(r.purchaser) + '</td>' +
         '<td class="nowrap ctr sm c-date">' + fmtDate(r.date) + '</td>' +
         '<td class="ctr sm">' + esc(r.receiver) + '</td>' +
         '<td class="num sm">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
-        '<td class="mono ctr sm">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>' +
-        '<td class="ctr sm c-gift ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
+        (isHidden('storage') ? '' : '<td class="mono ctr sm">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>') +
+        (isHidden('giftable') ? '' : '<td class="ctr sm c-gift ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>') +
         '<td class="detail sm"><span class="dfit">' + esc(r.detail) + '</span>' + copyBtn('detail', r.detail) + '</td>' +
         '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>' +
         '<td class="actions"><button type="button" class="linkbtn" data-act="edit">Edit</button>' +
@@ -827,6 +831,9 @@ td.num { padding-left: 8px; padding-right: 8px; }
     $('listSub').textContent = L.sub;
     document.title = L.docTitle;
     $('addBtn').textContent = '+ Add ' + L.noun;
+    document.body.classList.toggle('no-code', isHidden('categoryCode'));
+    els.giftFilter.hidden = isHidden('giftable');
+    buildHead(); paintHead();
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
       t.setAttribute('aria-selected', t.getAttribute('data-list') === cur ? 'true' : 'false');
     });
@@ -1190,6 +1197,9 @@ td.num { padding-left: 8px; padding-right: 8px; }
     clearErrors();
     var r = id ? state.records.filter(function (x) { return x.id === id; })[0] : null;
     els.title.textContent = (r ? 'Edit ' : 'Add ') + LISTS[cur].noun;
+    [['categoryCode', 'f-code'], ['storage', 'f-storage'], ['giftable', 'lbl-gift']].forEach(function (p) {
+      $(p[1]).closest('.field').hidden = isHidden(p[0]);
+    });
     els.saveBtn.textContent = r ? 'Save changes' : 'Save ' + LISTS[cur].noun;
     setVal('f-serial', r ? r.serial : nextSerial());
     setVal('f-date', r ? r.date : todayISO());
@@ -1254,7 +1264,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     }
     var saved = fromRow(res.data);
     upsertLocal(saved);
-    toast(editing ? 'Changes saved' : LISTS[cur].noun + ' added as No. ' + saved.serial + ' (' + saved.categoryCode + ')');
+    toast(editing ? 'Changes saved' : LISTS[cur].noun + ' added as No. ' + saved.serial + (isHidden('categoryCode') ? '' : ' (' + saved.categoryCode + ')'));
     render(); closeForm();
   });
 
@@ -1264,6 +1274,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     if (!state.records.length) { toast('Nothing to export yet'); return; }
     var head = ['Serial No.', 'Category', 'Category Code', 'Brand Name', 'Type / Expression', 'Purchaser',
       'Date of Receipt', 'Receiver', 'Quantity', 'Unit', 'Storage Code', 'Giftable', 'Detail', 'Latest Status'];
+    var skip = { 2: isHidden('categoryCode'), 10: isHidden('storage'), 11: isHidden('giftable') };
     var recs = state.records.slice().sort(function (a, b) { return (Number(a.serial) || 0) - (Number(b.serial) || 0); });
     var rows = recs.map(function (r) {
       var p = String(r.date || '').split('-').map(Number);
@@ -1271,12 +1282,15 @@ td.num { padding-left: 8px; padding-right: 8px; }
         p[0] ? new Date(Date.UTC(p[0], p[1] - 1, p[2])) : '', r.receiver, Number(r.qty), r.unit, r.storage,
         r.giftable, r.detail, r.status];
     });
+    var widths = [10, 14, 14, 18, 26, 14, 16, 14, 10, 8, 14, 10, 40, 14];
+    function keep(row) { return row.filter(function (v, i) { return !skip[i]; }); }
+    head = keep(head); rows = rows.map(keep); widths = keep(widths);
     var ws = XLSX.utils.aoa_to_sheet([head].concat(rows), { cellDates: true });
     for (var i = 1; i <= rows.length; i++) {
-      var c = ws[XLSX.utils.encode_cell({ r: i, c: 6 })];
+      var c = ws[XLSX.utils.encode_cell({ r: i, c: skip[2] ? 5 : 6 })];
       if (c && c.t === 'd') c.z = 'yyyy-mm-dd';
     }
-    ws['!cols'] = [10, 14, 14, 18, 26, 14, 16, 14, 10, 8, 14, 10, 40, 14].map(function (w) { return { wch: w }; });
+    ws['!cols'] = widths.map(function (w) { return { wch: w }; });
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, LISTS[cur].sheet);
     XLSX.writeFile(wb, LISTS[cur].file + '_' + todayISO() + '.xlsx');
