@@ -4,6 +4,18 @@ A shared stock register for the team. Sign in, then record every stock-in with s
 
 Data lives in a Supabase table (`stock_in`). Only signed-in people can read or change it.
 
+## Lists
+
+The page has three tabs, each with its own table in Supabase, so records never mix:
+
+| Tab | Table |
+| --- | --- |
+| Stock IN List | `stock_in` |
+| Unnumbered Stock In List | `stock_in_unnumbered` |
+| Stock OUT List | `stock_out` |
+
+All three have the same columns and the same numbering rules. Each counts its own Serial No. and Category Codes from 1. The address ends in `#unnumbered` or `#out` for the second and third tab, so a tab can be bookmarked. Export downloads the list that is open.
+
 ## Numbering and categories
 
 - **Category** is a dropdown with five choices: 酒类 (LW), 茶类 (TL), 礼品饰品类 (GP), 橙皮类 (OP) and 茶具类 (TW).

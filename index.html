@@ -296,6 +296,13 @@ td.num { padding-left: 8px; padding-right: 8px; }
 /* Page title: "In" stands out */
 .top h1 { font-weight: 500; }
 .top h1 .em { font-weight: 700; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
+/* List tabs */
+.tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--line); overflow-x: auto; margin-top: -8px; }
+.tab { font: inherit; font-size: 17px; color: var(--ink-2); background: none; border: 0; border-bottom: 3px solid transparent;
+  padding: 10px 2px; margin-bottom: -1px; cursor: pointer; white-space: nowrap; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.tab:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -326,8 +333,8 @@ td.num { padding-left: 8px; padding-right: 8px; }
 <div class="wrap" id="app" hidden>
   <header class="top">
     <div>
-      <h1>Stock <b class="em">IN</b> List</h1>
-      <p class="sub">Every stock-in the team has recorded, shared live.</p>
+      <h1 id="listTitle">Stock <b class="em">IN</b> List</h1>
+      <p class="sub" id="listSub">Every stock-in the team has recorded, shared live.</p>
     </div>
     <div class="top-actions">
       <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
@@ -337,6 +344,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
       <span class="btn-pair"><button type="button" class="btn primary" id="addBtn">+ Add Stock-In</button><button type="button" class="btn" id="exportBtn" title="Download all records as an Excel file">Export</button></span>
     </div>
   </header>
+
+  <nav class="tabs" role="tablist" aria-label="Lists">
+    <button type="button" role="tab" class="tab" data-list="in" aria-selected="true">Stock IN List</button>
+    <button type="button" role="tab" class="tab" data-list="unnumbered" aria-selected="false">Unnumbered Stock In List</button>
+    <button type="button" role="tab" class="tab" data-list="out" aria-selected="false">Stock OUT List</button>
+  </nav>
 
   <div class="toolbar">
     <div class="search"><input type="search" id="q" placeholder="Search serial no., brand, receiver, storage code…" aria-label="Search stock list"></div>
@@ -470,7 +483,17 @@ td.num { padding-left: 8px; padding-right: 8px; }
      decides who can read or change data, and only signed-in users are allowed. */
   var SUPABASE_URL = 'https://mhdxkwmjrquvvzpwolxx.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_7LJzFZ-twiuUF6olOZj0dQ_ygO5jcQm';
-  var TABLE = 'stock_in';
+  var LISTS = {
+    'in': { table: 'stock_in', hash: '', docTitle: 'Stock IN List', title: 'Stock <b class="em">IN</b> List',
+      sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Stock-IN-List', sheet: 'Stock IN' },
+    'unnumbered': { table: 'stock_in_unnumbered', hash: 'unnumbered', docTitle: 'Unnumbered Stock In List', title: 'Unnumbered Stock <b class="em">In</b> List',
+      sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Unnumbered-Stock-In-List', sheet: 'Unnumbered Stock In' },
+    'out': { table: 'stock_out', hash: 'out', docTitle: 'Stock OUT List', title: 'Stock <b class="em">OUT</b> List',
+      sub: 'Every stock-out the team has recorded, shared live.', noun: 'Stock-Out', file: 'Stock-OUT-List', sheet: 'Stock OUT' }
+  };
+  var lists = {};
+  Object.keys(LISTS).forEach(function (k) { lists[k] = { records: [], loaded: false }; });
+  var cur = 'in';
   var STATUSES = ['In stock', 'Reserved', 'Given out', 'Used', 'Damaged'];
   var CATEGORIES = [
     { name: '酒类', code: 'LW' }, { name: '茶类', code: 'TL' }, { name: '礼品饰品类', code: 'GP' },
@@ -504,7 +527,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
 
-  var state = { records: [] };
+  /* state.records is always the records of the list that is open */
+  var state = {};
+  Object.defineProperty(state, 'records', {
+    get: function () { return lists[cur].records; },
+    set: function (v) { lists[cur].records = v; }
+  });
   var ui = {
     q: '', gift: 'all', status: 'all', category: 'all', sortKey: 'serial', dir: -1,
     editingId: null, pendingDelete: null, deleteTimer: null,
@@ -529,11 +557,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
       latest_status: d.status
     };
   }
-  function upsertLocal(rec) {
-    for (var i = 0; i < state.records.length; i++) {
-      if (state.records[i].id === rec.id) { state.records[i] = rec; return; }
+  function upsertLocal(rec, key) {
+    var arr = lists[key || cur].records;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].id === rec.id) { arr[i] = rec; return; }
     }
-    state.records.push(rec);
+    arr.push(rec);
   }
 
   /* ---------- Helpers ---------- */
@@ -687,8 +716,8 @@ td.num { padding-left: 8px; padding-right: 8px; }
     if (!rows.length) {
       els.empty.hidden = false;
       if (ui.loading) els.empty.innerHTML = '<b>Loading stock…</b>';
-      else if (state.records.length) els.empty.innerHTML = '<b>No stock-in matches</b>Try a different search or clear the filters.';
-      else els.empty.innerHTML = '<b>No stock recorded yet</b>Use Add Stock-In to record the first one.';
+      else if (state.records.length) els.empty.innerHTML = '<b>No records match</b>Try a different search or clear the filters.';
+      else els.empty.innerHTML = '<b>No stock recorded yet</b>Use Add ' + LISTS[cur].noun + ' to record the first one.';
     } else els.empty.hidden = true;
 
     paintHead();
@@ -725,12 +754,13 @@ td.num { padding-left: 8px; padding-right: 8px; }
   });
 
   /* ---------- Load, realtime ---------- */
-  async function loadAll() {
-    ui.loading = true; $('loadNote').hidden = true; render();
-    var all = [], from = 0, size = 1000;
+  async function loadAll(key) {
+    key = key || cur;
+    var L = lists[key], from = 0, size = 1000, all = [];
+    if (key === cur) { ui.loading = true; $('loadNote').hidden = true; render(); }
     try {
       for (;;) {
-        var res = await sb.from(TABLE).select('*')
+        var res = await sb.from(LISTS[key].table).select('*')
           .order('date_of_receipt', { ascending: false })
           .order('created_at', { ascending: false })
           .range(from, from + size - 1);
@@ -739,39 +769,85 @@ td.num { padding-left: 8px; padding-right: 8px; }
         if (res.data.length < size) break;
         from += size;
       }
-      state.records = all.map(fromRow);
+      L.records = all.map(fromRow);
+      L.loaded = true;
     } catch (e) {
-      $('loadMsg').textContent = 'Could not load the stock list. Check your connection and try again.';
-      $('loadNote').hidden = false;
+      if (key === cur) {
+        $('loadMsg').textContent = 'Could not load the stock list. Check your connection and try again.';
+        $('loadNote').hidden = false;
+      }
     }
-    ui.loading = false; render();
+    if (key === cur) { ui.loading = false; render(); }
   }
-  $('retry').addEventListener('click', loadAll);
+  $('retry').addEventListener('click', function () { loadAll(cur); });
 
+  /* ---------- Tabs ---------- */
+  function listFromHash() {
+    var h = String(window.location.hash || '').replace('#', '');
+    for (var k in LISTS) if (LISTS[k].hash === h) return k;
+    return 'in';
+  }
+  function applyListUI() {
+    var L = LISTS[cur];
+    $('listTitle').innerHTML = L.title;
+    $('listSub').textContent = L.sub;
+    document.title = L.docTitle;
+    $('addBtn').textContent = '+ Add ' + L.noun;
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+      t.setAttribute('aria-selected', t.getAttribute('data-list') === cur ? 'true' : 'false');
+    });
+  }
+  function switchList(key) {
+    if (!LISTS[key] || key === cur) return;
+    cur = key;
+    ui.q = ''; ui.gift = 'all'; ui.status = 'all'; ui.category = 'all'; ui.pendingDelete = null;
+    els.q.value = ''; els.giftFilter.value = 'all'; els.statusFilter.value = 'all'; els.categoryFilter.value = 'all';
+    $('loadNote').hidden = true;
+    applyListUI();
+    try { history.replaceState(null, '', LISTS[key].hash ? '#' + LISTS[key].hash : window.location.pathname + window.location.search); } catch (e) {}
+    if (lists[key].loaded) render(); else loadAll(key);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+    t.addEventListener('click', function () { switchList(t.getAttribute('data-list')); });
+  });
+
+  function keyForTable(t) {
+    for (var k in LISTS) if (LISTS[k].table === t) return k;
+    return null;
+  }
   function onChange(payload) {
+    var key = keyForTable(payload.table);
+    if (!key || !lists[key].loaded) return;
     if (payload.eventType === 'DELETE') {
       var id = payload.old && payload.old.id;
-      state.records = state.records.filter(function (r) { return r.id !== id; });
+      lists[key].records = lists[key].records.filter(function (r) { return r.id !== id; });
     } else if (payload.new) {
-      upsertLocal(fromRow(payload.new));
+      upsertLocal(fromRow(payload.new), key);
     }
-    render();
-    if (!els.drawer.hidden) updatePreview();
+    if (key === cur) {
+      render();
+      if (!els.drawer.hidden) updatePreview();
+    }
   }
   function subscribe() {
     unsubscribe();
     setLive('connecting');
-    ui.channel = sb.channel('stock-in-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, onChange)
-      .subscribe(function (status) {
-        if (status === 'SUBSCRIBED') {
-          setLive('live');
-          if (ui.subscribedOnce) loadAll();
-          ui.subscribedOnce = true;
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          setLive('off');
+    var ch = sb.channel('stock-live');
+    Object.keys(LISTS).forEach(function (k) {
+      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table: LISTS[k].table }, onChange);
+    });
+    ui.channel = ch.subscribe(function (status) {
+      if (status === 'SUBSCRIBED') {
+        setLive('live');
+        if (ui.subscribedOnce) {
+          Object.keys(lists).forEach(function (k) { if (k !== cur) lists[k].loaded = false; });
+          loadAll(cur);
         }
-      });
+        ui.subscribedOnce = true;
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        setLive('off');
+      }
+    });
   }
   function unsubscribe() {
     if (ui.channel) { sb.removeChannel(ui.channel); ui.channel = null; }
@@ -791,13 +867,15 @@ td.num { padding-left: 8px; padding-right: 8px; }
       if (ui.userId !== session.user.id) {
         ui.userId = session.user.id;
         showApp();
+        cur = listFromHash();
+        applyListUI();
         subscribe();
-        await loadAll();
+        await loadAll(cur);
       }
     } else {
       ui.userId = null;
       unsubscribe();
-      state.records = [];
+      Object.keys(lists).forEach(function (k) { lists[k].records = []; lists[k].loaded = false; });
       showAuth();
     }
   }
@@ -858,10 +936,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
     if (ui.pendingDelete === id) {
       clearTimeout(ui.deleteTimer);
       ui.pendingDelete = null;
-      var res = await sb.from(TABLE).delete().eq('id', id);
+      var key = cur;
+      var res = await sb.from(LISTS[key].table).delete().eq('id', id);
       if (res.error) { toast('Could not delete. Try again.'); render(); return; }
-      state.records = state.records.filter(function (r) { return r.id !== id; });
-      render(); toast('Stock-in deleted');
+      lists[key].records = lists[key].records.filter(function (r) { return r.id !== id; });
+      if (key === cur) render();
+      toast(LISTS[key].noun + ' deleted');
     } else {
       ui.pendingDelete = id;
       clearTimeout(ui.deleteTimer);
@@ -908,8 +988,8 @@ td.num { padding-left: 8px; padding-right: 8px; }
     ui.editingId = id || null;
     clearErrors();
     var r = id ? state.records.filter(function (x) { return x.id === id; })[0] : null;
-    els.title.textContent = r ? 'Edit Stock-In' : 'Add Stock-In';
-    els.saveBtn.textContent = r ? 'Save changes' : 'Save Stock-In';
+    els.title.textContent = (r ? 'Edit ' : 'Add ') + LISTS[cur].noun;
+    els.saveBtn.textContent = r ? 'Save changes' : 'Save ' + LISTS[cur].noun;
     setVal('f-serial', r ? r.serial : nextSerial());
     setVal('f-date', r ? r.date : todayISO());
     setVal('f-category', r ? r.category : '');
@@ -963,8 +1043,8 @@ td.num { padding-left: 8px; padding-right: 8px; }
     var row = toRow(d), res;
     try {
       res = editing
-        ? await sb.from(TABLE).update(row).eq('id', ui.editingId).select().single()
-        : await sb.from(TABLE).insert(row).select().single();
+        ? await sb.from(LISTS[cur].table).update(row).eq('id', ui.editingId).select().single()
+        : await sb.from(LISTS[cur].table).insert(row).select().single();
     } catch (ex) {
       res = { error: { message: String(ex) } };
     }
@@ -975,7 +1055,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     }
     var saved = fromRow(res.data);
     upsertLocal(saved);
-    toast(editing ? 'Changes saved' : 'Stock-in added as No. ' + saved.serial + ' (' + saved.categoryCode + ')');
+    toast(editing ? 'Changes saved' : LISTS[cur].noun + ' added as No. ' + saved.serial + ' (' + saved.categoryCode + ')');
     render(); closeForm();
   });
 
@@ -999,8 +1079,8 @@ td.num { padding-left: 8px; padding-right: 8px; }
     }
     ws['!cols'] = [10, 14, 14, 18, 26, 14, 16, 14, 10, 8, 14, 10, 40, 14].map(function (w) { return { wch: w }; });
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Stock In-Out');
-    XLSX.writeFile(wb, 'Stock-In-Out-List_' + todayISO() + '.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, LISTS[cur].sheet);
+    XLSX.writeFile(wb, LISTS[cur].file + '_' + todayISO() + '.xlsx');
     toast('Exported ' + rows.length + ' record' + (rows.length === 1 ? '' : 's') + ' to Excel');
   });
 
