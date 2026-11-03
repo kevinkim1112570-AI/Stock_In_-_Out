@@ -103,7 +103,7 @@ input::placeholder, textarea::placeholder { color: var(--ink-2); opacity: 0.8; }
 
 /* Table */
 .table-scroll { overflow: auto; flex: 1 1 0; min-height: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1500px; font-size: 17px; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1560px; font-size: 17px; }
 th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 td { background: var(--surface); }
 tbody tr:last-child td { border-bottom: 0; }
@@ -124,7 +124,7 @@ td.num { font-variant-numeric: tabular-nums; font-weight: 500; }
 .c-serial { position: sticky; left: 0; z-index: 1; font-family: var(--font-mono); font-size: 16px; font-weight: 500; white-space: nowrap; border-right: 1px solid var(--line); }
 thead th.c-serial { z-index: 3; left: 0; }
 td.nowrap { white-space: nowrap; }
-td.detail { min-width: 260px; max-width: 320px; color: var(--ink-2); font-size: 16px; }
+td.detail { min-width: 260px; max-width: 320px; color: var(--ink-2); font-size: 15px; }
 td.detail span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 td.actions { white-space: nowrap; text-align: right; }
 td.actions .linkbtn + .linkbtn { margin-left: 14px; }
@@ -209,8 +209,8 @@ input[readonly]:focus { border-color: var(--line); box-shadow: none; }
 /* Table fills the screen so the header row stays on top while rows scroll */
 :root { --pad-y: 24px; }
 #app { height: calc(100vh - 2 * var(--pad-y)); height: calc(100dvh - 2 * var(--pad-y)); min-height: 560px; }
-th.c-serial, td.c-serial { width: 88px; min-width: 88px; max-width: 88px; }
-th.c-code, td.c-code { width: 112px; min-width: 112px; max-width: 112px; }
+th.c-serial, td.c-serial { width: 60px; min-width: 60px; max-width: 60px; }
+th.c-code, td.c-code { width: 96px; min-width: 96px; max-width: 96px; }
 td.c-serial, td.c-code { padding-left: 14px; padding-right: 8px; }
 th.c-serial .sortbtn, th.c-code .sortbtn { display: block; white-space: normal; line-height: 1.3; padding: 16px 8px 16px 14px; }
 th.c-serial .arrow, th.c-code .arrow { margin-left: 6px; }
@@ -224,13 +224,28 @@ tbody tr td.code-GP, tbody tr:hover td.code-GP { background: #37CBFF; color: #1B
 tbody tr td.code-OP, tbody tr:hover td.code-OP { background: #FFFF00; color: #1B1F23; }
 tbody tr td.code-TW, tbody tr:hover td.code-TW { background: #15AC70; color: #1B1F23; }
 /* Category Code: slightly stronger than the other text, centered, a clear white gap between colored cells */
-tbody tr td.c-code { text-align: center; font-size: 18px; font-weight: 600; padding: 14px 6px; border-bottom: 3px solid var(--field); }
+tbody tr td.c-code { text-align: center; font-size: 18px; font-weight: 600; padding: 8px 4px; border-bottom: 3px solid var(--field); }
 tbody tr:last-child td.c-code { border-bottom: 0; }
 td.c-code .cc-p { margin-right: 0.28em; }
 th.c-code .sortbtn { text-align: center; padding-left: 8px; }
 /* Centered columns */
 td.ctr { text-align: center; }
 th.ctr .sortbtn { justify-content: center; text-align: center; }
+/* Compact layout: narrower columns, a size smaller text, 3 lines for Brand and Type */
+tbody td { padding-top: 8px; padding-bottom: 8px; }
+tbody tr { height: 54px; }
+td.sm { font-size: 16px; }
+td.sm.mono { font-size: 15px; }
+td.detail.sm { font-size: 15px; }
+.clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; }
+th.c-brand, td.c-brand { width: 190px; min-width: 190px; }
+th.c-type, td.c-type { width: 230px; min-width: 230px; }
+th.c-date, td.c-date { width: 112px; min-width: 112px; max-width: 112px; }
+th.c-gift, td.c-gift { width: 104px; min-width: 104px; max-width: 104px; }
+td.c-date, td.c-gift { padding-left: 8px; padding-right: 8px; }
+th.c-serial .sortbtn { padding: 16px 4px 16px 12px; }
+th.c-code .sortbtn { padding: 16px 4px; }
+th.c-date .sortbtn, th.c-gift .sortbtn { display: block; white-space: normal; line-height: 1.3; padding: 16px 6px; }
 </style>
 </head>
 <body>
@@ -411,17 +426,17 @@ th.ctr .sortbtn { justify-content: center; text-align: center; }
     { name: '橙皮类', code: 'OP' }, { name: '茶具类', code: 'TW' }
   ];
   var COLS = [
-    { key: 'serial', label: 'Serial No.', cls: 'c-serial' },
+    { key: 'serial', label: 'SN', title: 'Serial No.', cls: 'c-serial' },
     { key: 'category', label: 'Category' },
     { key: 'categoryCode', label: 'Category Code', cls: 'c-code' },
-    { key: 'brand', label: 'Brand Name' },
-    { key: 'type', label: 'Type / Expression' },
+    { key: 'brand', label: 'Brand Name', cls: 'c-brand' },
+    { key: 'type', label: 'Type / Expression', cls: 'c-type' },
     { key: 'purchaser', label: 'Purchaser', cls: 'ctr' },
-    { key: 'date', label: 'Date of Receipt', cls: 'ctr' },
+    { key: 'date', label: 'Date of Receipt', cls: 'ctr c-date' },
     { key: 'receiver', label: 'Receiver', cls: 'ctr' },
     { key: 'qty', label: 'Quantity', cls: 'num' },
     { key: 'storage', label: 'Storage Code', cls: 'ctr' },
-    { key: 'giftable', label: 'Giftable', cls: 'ctr' },
+    { key: 'giftable', label: 'Giftable', cls: 'ctr c-gift' },
     { key: 'detail', label: 'Detail', plain: true },
     { key: 'status', label: 'Latest Status' }
   ];
@@ -503,7 +518,7 @@ th.ctr .sortbtn { justify-content: center; text-align: center; }
     COLS.forEach(function (c) {
       var cls = [c.cls || '', c.plain ? 'plain' : ''].join(' ').trim();
       if (c.plain) h += '<th class="' + cls + '" scope="col">' + c.label + '</th>';
-      else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"><button type="button" class="sortbtn" data-sort="' + c.key + '">' + c.label + '<span class="arrow"></span></button></th>';
+      else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"' + (c.title ? ' title="' + c.title + '"' : '') + '><button type="button" class="sortbtn" data-sort="' + c.key + '"' + (c.title ? ' aria-label="' + c.title + '"' : '') + '>' + c.label + '<span class="arrow"></span></button></th>';
     });
     h += '<th class="plain" scope="col"><span style="position:absolute;left:-9999px">Actions</span></th>';
     els.head.innerHTML = h;
@@ -544,15 +559,15 @@ th.ctr .sortbtn { justify-content: center; text-align: center; }
         '<td class="c-serial">' + esc(r.serial) + '</td>' +
         '<td class="nowrap">' + esc(r.category) + '</td>' +
         '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').slice(0, 2)) + '</span><span class="cc-n">' + esc(String(r.categoryCode || '').slice(2)) + '</span></td>' +
-        '<td>' + esc(r.brand) + '</td>' +
-        '<td>' + esc(r.type) + '</td>' +
-        '<td class="ctr">' + esc(r.purchaser) + '</td>' +
-        '<td class="nowrap ctr">' + fmtDate(r.date) + '</td>' +
-        '<td class="ctr">' + esc(r.receiver) + '</td>' +
-        '<td class="num">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
-        '<td class="mono ctr">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>' +
-        '<td class="ctr ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
-        '<td class="detail"><span>' + esc(r.detail) + '</span></td>' +
+        '<td class="c-brand"><span class="clamp3">' + esc(r.brand) + '</span></td>' +
+        '<td class="c-type"><span class="clamp3">' + esc(r.type) + '</span></td>' +
+        '<td class="ctr sm">' + esc(r.purchaser) + '</td>' +
+        '<td class="nowrap ctr sm c-date">' + fmtDate(r.date) + '</td>' +
+        '<td class="ctr sm">' + esc(r.receiver) + '</td>' +
+        '<td class="num sm">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
+        '<td class="mono ctr sm">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>' +
+        '<td class="ctr sm c-gift ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
+        '<td class="detail sm"><span>' + esc(r.detail) + '</span></td>' +
         '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>' +
         '<td class="actions"><button type="button" class="linkbtn" data-act="edit">Edit</button>' +
         '<button type="button" class="linkbtn' + (armed ? ' danger-arm' : '') + '" data-act="del">' + (armed ? 'Confirm delete' : 'Delete') + '</button></td>' +
