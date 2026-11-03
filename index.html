@@ -228,6 +228,9 @@ tbody tr td.c-code { text-align: center; font-size: 18px; font-weight: 600; padd
 tbody tr:last-child td.c-code { border-bottom: 0; }
 td.c-code .cc-p { margin-right: 0.28em; }
 th.c-code .sortbtn { text-align: center; padding-left: 8px; }
+/* Centered columns */
+td.ctr { text-align: center; }
+th.ctr .sortbtn { justify-content: center; text-align: center; }
 </style>
 </head>
 <body>
@@ -413,12 +416,12 @@ th.c-code .sortbtn { text-align: center; padding-left: 8px; }
     { key: 'categoryCode', label: 'Category Code', cls: 'c-code' },
     { key: 'brand', label: 'Brand Name' },
     { key: 'type', label: 'Type / Expression' },
-    { key: 'purchaser', label: 'Purchaser' },
-    { key: 'date', label: 'Date of Receipt' },
-    { key: 'receiver', label: 'Receiver' },
+    { key: 'purchaser', label: 'Purchaser', cls: 'ctr' },
+    { key: 'date', label: 'Date of Receipt', cls: 'ctr' },
+    { key: 'receiver', label: 'Receiver', cls: 'ctr' },
     { key: 'qty', label: 'Quantity', cls: 'num' },
-    { key: 'storage', label: 'Storage Code' },
-    { key: 'giftable', label: 'Giftable' },
+    { key: 'storage', label: 'Storage Code', cls: 'ctr' },
+    { key: 'giftable', label: 'Giftable', cls: 'ctr' },
     { key: 'detail', label: 'Detail', plain: true },
     { key: 'status', label: 'Latest Status' }
   ];
@@ -543,12 +546,12 @@ th.c-code .sortbtn { text-align: center; padding-left: 8px; }
         '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').slice(0, 2)) + '</span><span class="cc-n">' + esc(String(r.categoryCode || '').slice(2)) + '</span></td>' +
         '<td>' + esc(r.brand) + '</td>' +
         '<td>' + esc(r.type) + '</td>' +
-        '<td>' + esc(r.purchaser) + '</td>' +
-        '<td class="nowrap">' + fmtDate(r.date) + '</td>' +
-        '<td>' + esc(r.receiver) + '</td>' +
+        '<td class="ctr">' + esc(r.purchaser) + '</td>' +
+        '<td class="nowrap ctr">' + fmtDate(r.date) + '</td>' +
+        '<td class="ctr">' + esc(r.receiver) + '</td>' +
         '<td class="num">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
-        '<td class="mono">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>' +
-        '<td class="' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
+        '<td class="mono ctr">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>' +
+        '<td class="ctr ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
         '<td class="detail"><span>' + esc(r.detail) + '</span></td>' +
         '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>' +
         '<td class="actions"><button type="button" class="linkbtn" data-act="edit">Edit</button>' +
