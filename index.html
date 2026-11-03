@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>:root{color-scheme:light}html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}</style>
-<title>Stock In/Out List</title>
+<title>Stock In List</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* Layout: one wide data table under a toolbar; the add/edit form slides in from the right. */
 :root {
@@ -293,6 +293,9 @@ th.plain.num { padding-left: 8px; padding-right: 8px; }
 td.num { padding-left: 8px; padding-right: 8px; }
 /* The three filter dropdowns share one size */
 .toolbar select { flex: 0 0 210px; width: 210px; max-width: 100%; }
+/* Page title: "In" stands out */
+.top h1 { font-weight: 500; }
+.top h1 .em { font-weight: 700; }
 </style>
 </head>
 <body>
@@ -323,7 +326,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
 <div class="wrap" id="app" hidden>
   <header class="top">
     <div>
-      <h1>Stock In/Out List</h1>
+      <h1>Stock <b class="em">In</b> List</h1>
       <p class="sub">Every stock-in the team has recorded, shared live.</p>
     </div>
     <div class="top-actions">
