@@ -124,8 +124,8 @@ td.num { font-variant-numeric: tabular-nums; font-weight: 500; }
 .c-serial { position: sticky; left: 0; z-index: 1; font-family: var(--font-mono); font-size: 16px; font-weight: 500; white-space: nowrap; border-right: 1px solid var(--line); }
 thead th.c-serial { z-index: 3; left: 0; }
 td.nowrap { white-space: nowrap; }
-td.detail { min-width: 260px; max-width: 320px; color: var(--ink-2); font-size: 15px; }
-td.detail span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+td.detail { width: 340px; min-width: 340px; color: var(--ink-2); font-size: 14px; }
+td.detail .dfit { display: block; overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; font-size: 14px; max-height: 61px; }
 td.actions { white-space: nowrap; text-align: right; }
 td.actions .linkbtn + .linkbtn { margin-left: 14px; }
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; background: var(--hover); font-size: 15px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line); }
@@ -236,8 +236,9 @@ tbody td { padding-top: 8px; padding-bottom: 8px; }
 tbody tr { height: 54px; }
 td.sm { font-size: 16px; }
 td.sm.mono { font-size: 15px; }
-td.detail.sm { font-size: 15px; }
+td.detail.sm { font-size: 14px; }
 .clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; }
+th.plain.c-detail { width: 340px; min-width: 340px; }
 th.c-brand, td.c-brand { width: 190px; min-width: 190px; }
 th.c-type, td.c-type { width: 230px; min-width: 230px; }
 th.c-date, td.c-date { width: 112px; min-width: 112px; max-width: 112px; }
@@ -437,7 +438,7 @@ th.c-date .sortbtn, th.c-gift .sortbtn { display: block; white-space: normal; li
     { key: 'qty', label: 'Quantity', cls: 'num' },
     { key: 'storage', label: 'Storage Code', cls: 'ctr' },
     { key: 'giftable', label: 'Giftable', cls: 'ctr c-gift' },
-    { key: 'detail', label: 'Detail', plain: true },
+    { key: 'detail', label: 'Detail', plain: true, cls: 'c-detail' },
     { key: 'status', label: 'Latest Status' }
   ];
 
@@ -551,6 +552,29 @@ th.c-date .sortbtn, th.c-gift .sortbtn { display: block; white-space: normal; li
     }).sort(cmp);
   }
 
+  /* Detail text: 14px, up to 3 lines. If it does not fit, shrink the font until all of it shows
+     (never taller than the 3-line Brand / Type box). */
+  function fitDetails() {
+    var spans = els.body.querySelectorAll('td.detail .dfit');
+    Array.prototype.forEach.call(spans, function (el) {
+      el.style.maxHeight = 'none';
+      el.removeAttribute('title');
+      var fs = 14;
+      el.style.fontSize = fs + 'px';
+      while (fs > 8) {
+        var limit = fs >= 10 ? 3 * fs * 1.25 : 61;
+        if (el.scrollHeight <= limit + 1) break;
+        fs -= 0.5;
+        el.style.fontSize = fs + 'px';
+      }
+      el.style.maxHeight = '61px';
+      if (el.scrollHeight > 62) el.title = el.textContent;
+    });
+  }
+  var fitTimer;
+  window.addEventListener('resize', function () { clearTimeout(fitTimer); fitTimer = setTimeout(fitDetails, 150); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitDetails);
+
   function render() {
     var rows = visible();
     els.body.innerHTML = rows.map(function (r) {
@@ -567,7 +591,7 @@ th.c-date .sortbtn, th.c-gift .sortbtn { display: block; white-space: normal; li
         '<td class="num sm">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
         '<td class="mono ctr sm">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>' +
         '<td class="ctr sm c-gift ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>' +
-        '<td class="detail sm"><span>' + esc(r.detail) + '</span></td>' +
+        '<td class="detail sm"><span class="dfit">' + esc(r.detail) + '</span></td>' +
         '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>' +
         '<td class="actions"><button type="button" class="linkbtn" data-act="edit">Edit</button>' +
         '<button type="button" class="linkbtn' + (armed ? ' danger-arm' : '') + '" data-act="del">' + (armed ? 'Confirm delete' : 'Delete') + '</button></td>' +
@@ -583,6 +607,7 @@ th.c-date .sortbtn, th.c-gift .sortbtn { display: block; white-space: normal; li
 
     paintHead();
     refreshLists();
+    fitDetails();
   }
 
   function refreshLists() {
