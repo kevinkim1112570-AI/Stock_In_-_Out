@@ -215,8 +215,8 @@ td.c-serial, td.c-code { padding-left: 14px; padding-right: 8px; }
 th.c-serial .sortbtn, th.c-code .sortbtn { display: block; white-space: normal; line-height: 1.3; padding: 16px 8px 16px 14px; }
 th.c-serial .arrow, th.c-code .arrow { margin-left: 6px; }
 .btn-pair { display: inline-flex; gap: 10px; align-items: stretch; }
-.btn-pair #addBtn { width: 204px; padding-left: 0; padding-right: 0; white-space: nowrap; }
-.btn-pair #exportBtn { width: 68px; padding-left: 0; padding-right: 0; font-size: 16px; white-space: nowrap; }
+.btn-pair #addBtn { width: 168px; padding-left: 0; padding-right: 0; white-space: nowrap; }
+.btn-pair #exportBtn { width: 56px; padding-left: 0; padding-right: 0; font-size: 16px; white-space: nowrap; }
 /* Category Code cell colors by prefix. Fixed colors, so the text stays dark in both themes. */
 tbody tr td.code-TL, tbody tr:hover td.code-TL { background: #83C937; color: #1B1F23; }
 tbody tr td.code-LW, tbody tr:hover td.code-LW { background: #FFC1C1; color: #1B1F23; }
@@ -291,6 +291,8 @@ td:hover .copybtn, .copybtn:focus-visible { opacity: 1; }
 th.num, td.num { width: 92px; min-width: 92px; max-width: 92px; }
 th.plain.num { padding-left: 8px; padding-right: 8px; }
 td.num { padding-left: 8px; padding-right: 8px; }
+/* The three filter dropdowns share one size */
+.toolbar select { flex: 0 0 210px; width: 210px; max-width: 100%; }
 </style>
 </head>
 <body>
