@@ -214,6 +214,9 @@ th.c-code, td.c-code { width: 112px; min-width: 112px; max-width: 112px; }
 td.c-serial, td.c-code { padding-left: 14px; padding-right: 8px; }
 th.c-serial .sortbtn, th.c-code .sortbtn { display: block; white-space: normal; line-height: 1.3; padding: 16px 8px 16px 14px; }
 th.c-serial .arrow, th.c-code .arrow { margin-left: 6px; }
+.btn-pair { display: inline-flex; gap: 10px; align-items: stretch; }
+.btn-pair #addBtn { width: 204px; padding-left: 0; padding-right: 0; white-space: nowrap; }
+.btn-pair #exportBtn { width: 68px; padding-left: 0; padding-right: 0; font-size: 16px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -251,7 +254,7 @@ th.c-serial .arrow, th.c-code .arrow { margin-left: 6px; }
       <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
       <span class="who" id="who"></span>
       <button type="button" class="linkbtn" id="signOut">Sign out</button>
-      <button type="button" class="btn primary" id="addBtn">+ Add Stock-In</button>
+      <span class="btn-pair"><button type="button" class="btn primary" id="addBtn">+ Add Stock-In</button><button type="button" class="btn" id="exportBtn" title="Download all records as an Excel file">Export</button></span>
     </div>
   </header>
 
@@ -378,6 +381,7 @@ th.c-serial .arrow, th.c-code .arrow { margin-left: 6px; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.75.0/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function () {
   'use strict';
@@ -831,6 +835,31 @@ th.c-serial .arrow, th.c-code .arrow { margin-left: 6px; }
     upsertLocal(saved);
     toast(editing ? 'Changes saved' : 'Stock-in added as No. ' + saved.serial + ' (' + saved.categoryCode + ')');
     render(); closeForm();
+  });
+
+  /* ---------- Export to Excel ---------- */
+  $('exportBtn').addEventListener('click', function () {
+    if (!window.XLSX) { toast('Excel export did not load. Reload the page and try again.'); return; }
+    if (!state.records.length) { toast('Nothing to export yet'); return; }
+    var head = ['Serial No.', 'Category', 'Category Code', 'Brand Name', 'Type / Expression', 'Purchaser',
+      'Date of Receipt', 'Receiver', 'Quantity', 'Unit', 'Storage Code', 'Giftable', 'Detail', 'Latest Status'];
+    var recs = state.records.slice().sort(function (a, b) { return (Number(a.serial) || 0) - (Number(b.serial) || 0); });
+    var rows = recs.map(function (r) {
+      var p = String(r.date || '').split('-').map(Number);
+      return [Number(r.serial), r.category, r.categoryCode, r.brand, r.type, r.purchaser,
+        p[0] ? new Date(Date.UTC(p[0], p[1] - 1, p[2])) : '', r.receiver, Number(r.qty), r.unit, r.storage,
+        r.giftable, r.detail, r.status];
+    });
+    var ws = XLSX.utils.aoa_to_sheet([head].concat(rows), { cellDates: true });
+    for (var i = 1; i <= rows.length; i++) {
+      var c = ws[XLSX.utils.encode_cell({ r: i, c: 6 })];
+      if (c && c.t === 'd') c.z = 'yyyy-mm-dd';
+    }
+    ws['!cols'] = [10, 14, 14, 18, 26, 14, 16, 14, 10, 8, 14, 10, 40, 14].map(function (w) { return { wch: w }; });
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Stock In-Out');
+    XLSX.writeFile(wb, 'Stock-In-Out-List_' + todayISO() + '.xlsx');
+    toast('Exported ' + rows.length + ' record' + (rows.length === 1 ? '' : 's') + ' to Excel');
   });
 
   $('addBtn').addEventListener('click', function () { openForm(null); });
