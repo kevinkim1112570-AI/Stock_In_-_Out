@@ -743,7 +743,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
       return '<tr data-id="' + esc(r.id) + '">' +
         '<td class="c-serial">' + esc(r.serial) + '</td>' +
         '<td class="nowrap c-cat">' + esc(r.category) + '</td>' +
-        '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').slice(0, 2)) + '</span><span class="cc-n">' + esc(String(r.categoryCode || '').slice(2)) + '</span></td>' +
+        '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').replace(/[0-9]+$/, '')) + '</span><span class="cc-n">' + esc((String(r.categoryCode || '').match(/[0-9]+$/) || [''])[0]) + '</span></td>' +
         '<td class="c-brand"><span class="clamp3">' + esc(r.brand) + '</span>' + copyBtn('brand', r.brand) + '</td>' +
         '<td class="c-type"><span class="clamp3">' + esc(r.type) + '</span>' + copyBtn('type', r.type) + '</td>' +
         '<td class="ctr sm">' + esc(r.purchaser) + '</td>' +
