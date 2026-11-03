@@ -223,7 +223,10 @@ tbody tr td.code-LW, tbody tr:hover td.code-LW { background: #FFC1C1; color: #1B
 tbody tr td.code-GP, tbody tr:hover td.code-GP { background: #37CBFF; color: #1B1F23; }
 tbody tr td.code-OP, tbody tr:hover td.code-OP { background: #FFFF00; color: #1B1F23; }
 tbody tr td.code-TW, tbody tr:hover td.code-TW { background: #15AC70; color: #1B1F23; }
-td.c-code[class*="code-"] { font-weight: 500; }
+/* Category Code: bigger, centered, gap between letters and number, colors join up and down */
+tbody tr td.c-code { text-align: center; font-size: 21px; font-weight: 600; padding: 14px 6px; border-bottom-color: transparent; }
+td.c-code .cc-p { margin-right: 0.28em; }
+th.c-code .sortbtn { text-align: center; padding-left: 8px; }
 </style>
 </head>
 <body>
@@ -536,7 +539,7 @@ td.c-code[class*="code-"] { font-weight: 500; }
       return '<tr data-id="' + esc(r.id) + '">' +
         '<td class="c-serial">' + esc(r.serial) + '</td>' +
         '<td class="nowrap">' + esc(r.category) + '</td>' +
-        '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '">' + esc(r.categoryCode) + '</td>' +
+        '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').slice(0, 2)) + '</span><span class="cc-n">' + esc(String(r.categoryCode || '').slice(2)) + '</span></td>' +
         '<td>' + esc(r.brand) + '</td>' +
         '<td>' + esc(r.type) + '</td>' +
         '<td>' + esc(r.purchaser) + '</td>' +
