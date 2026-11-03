@@ -252,6 +252,9 @@ th.c-serial .sortbtn { text-align: center; padding: 16px 4px; }
 td.c-serial { text-align: center; padding-left: 4px; padding-right: 4px; }
 th.c-brand .sortbtn, th.c-type .sortbtn { justify-content: center; text-align: center; }
 th.plain.c-detail { text-align: center; }
+/* Columns without sorting use plain headers */
+th.ctr, th.c-brand, th.c-type { text-align: center; }
+th.plain.c-date { white-space: normal; line-height: 1.3; padding: 16px 6px; }
 </style>
 </head>
 <body>
@@ -435,13 +438,13 @@ th.plain.c-detail { text-align: center; }
     { key: 'serial', label: 'SN', title: 'Serial No.', cls: 'c-serial' },
     { key: 'category', label: 'Category' },
     { key: 'categoryCode', label: 'Category Code', cls: 'c-code' },
-    { key: 'brand', label: 'Brand Name', cls: 'c-brand' },
-    { key: 'type', label: 'Type / Expression', cls: 'c-type' },
-    { key: 'purchaser', label: 'Purchaser', cls: 'ctr' },
-    { key: 'date', label: 'Date of Receipt', cls: 'ctr c-date' },
-    { key: 'receiver', label: 'Receiver', cls: 'ctr' },
-    { key: 'qty', label: 'Quantity', cls: 'num' },
-    { key: 'storage', label: 'Storage Code', cls: 'ctr' },
+    { key: 'brand', label: 'Brand Name', plain: true, cls: 'c-brand' },
+    { key: 'type', label: 'Type / Expression', plain: true, cls: 'c-type' },
+    { key: 'purchaser', label: 'Purchaser', plain: true, cls: 'ctr' },
+    { key: 'date', label: 'Date of Receipt', plain: true, cls: 'ctr c-date' },
+    { key: 'receiver', label: 'Receiver', plain: true, cls: 'ctr' },
+    { key: 'qty', label: 'Quantity', plain: true, cls: 'num' },
+    { key: 'storage', label: 'Storage Code', plain: true, cls: 'ctr' },
     { key: 'giftable', label: 'Giftable', cls: 'ctr c-gift' },
     { key: 'detail', label: 'Detail', plain: true, cls: 'c-detail' },
     { key: 'status', label: 'Latest Status' }
@@ -461,7 +464,7 @@ th.plain.c-detail { text-align: center; }
 
   var state = { records: [] };
   var ui = {
-    q: '', gift: 'all', status: 'all', category: 'all', sortKey: 'date', dir: -1,
+    q: '', gift: 'all', status: 'all', category: 'all', sortKey: 'serial', dir: -1,
     editingId: null, pendingDelete: null, deleteTimer: null,
     loading: false, userId: null, channel: null, subscribedOnce: false
   };
