@@ -326,6 +326,17 @@ td.num { padding-left: 8px; padding-right: 8px; }
 .cellinput.desc { text-align: left; }
 .cellinput[aria-invalid="true"] { background: var(--accent-tint); }
 @media (max-width: 900px) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }
+/* Compact header: more room for the list */
+:root { --pad-y: 14px; }
+.wrap { gap: 12px; }
+#app .top { align-items: center; gap: 10px 20px; }
+#app h1 { font-size: 28px; }
+#app .top .sub { display: none; }
+#app .top .btn { padding-top: 8px; padding-bottom: 8px; }
+#app .tabs { margin-top: 0; }
+#app .tab { padding-top: 6px; padding-bottom: 8px; }
+#app .toolbar { gap: 10px; }
+#app .toolbar input[type="search"], #app .toolbar select { padding-top: 8px; padding-bottom: 8px; }
 </style>
 </head>
 <body>
