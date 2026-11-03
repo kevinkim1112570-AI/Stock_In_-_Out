@@ -462,7 +462,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
         <span class="help" id="h-serial">Assigned automatically</span>
       </div>
       <div class="field">
-        <label for="f-date">Date of Receipt <span class="req">*</span></label>
+        <label for="f-date" id="lb-date">Date of Receipt <span class="req">*</span></label>
         <input id="f-date" name="date" type="date">
         <span class="err" id="err-date"></span>
       </div>
@@ -485,15 +485,27 @@ td.num { padding-left: 8px; padding-right: 8px; }
         <label for="f-type">Type / Expression</label>
         <input id="f-type" name="type" autocomplete="off">
       </div>
+      <div class="field" data-only="out">
+        <label for="f-invid">Inventory ID</label>
+        <input id="f-invid" name="inventoryId" autocomplete="off">
+      </div>
       <div class="field">
-        <label for="f-purchaser">Purchaser <span class="req">*</span></label>
+        <label for="f-purchaser" id="lb-purchaser">Purchaser <span class="req">*</span></label>
         <select id="f-purchaser" name="purchaser"></select>
         <span class="err" id="err-purchaser"></span>
       </div>
       <div class="field">
-        <label for="f-receiver">Receiver <span class="req">*</span></label>
+        <label for="f-receiver" id="lb-receiver">Receiver <span class="req">*</span></label>
         <select id="f-receiver" name="receiver"></select>
         <span class="err" id="err-receiver"></span>
+      </div>
+      <div class="field" data-only="out">
+        <label for="f-relstatus">Status of Release</label>
+        <input id="f-relstatus" name="releaseStatus" autocomplete="off">
+      </div>
+      <div class="field" data-only="out">
+        <label for="f-recipient">Recipient</label>
+        <input id="f-recipient" name="recipient" autocomplete="off">
       </div>
       <div class="field">
         <label for="f-qty">Quantity <span class="req">*</span></label>
@@ -552,7 +564,8 @@ td.num { padding-left: 8px; padding-right: 8px; }
     'unnumbered': { table: 'stock_in_unnumbered', hash: 'unnumbered', docTitle: 'Unnumbered Stock In List', title: 'Unnumbered Stock <b class="em">In</b> List',
       hide: ['categoryCode', 'storage', 'giftable'],
       sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Unnumbered-Stock-In-List', sheet: 'Unnumbered Stock In' },
-    'out': { table: 'stock_out', hash: 'out', release: true, docTitle: 'Stock OUT List', title: 'Stock <b class="em">OUT</b> List',
+    'out': { table: 'stock_out', hash: 'out', release: true, hide: ['purchaser', 'storage', 'giftable'], labels: { date: 'Date of Release', receiver: 'In-charge' },
+      docTitle: 'Stock OUT List', title: 'Stock <b class="em">OUT</b> List',
       sub: 'Every stock-out the team has recorded, shared live.', noun: 'Stock-Out', file: 'Stock-OUT-List', sheet: 'Stock OUT' }
   };
   var lists = {};
@@ -565,9 +578,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
     { key: 'categoryCode', label: 'Category Code', cls: 'c-code' },
     { key: 'brand', label: 'Brand Name', plain: true, cls: 'c-brand' },
     { key: 'type', label: 'Type / Expression', plain: true, cls: 'c-type' },
+    { key: 'inventoryId', label: 'Inventory ID', plain: true, cls: 'ctr', only: 'out' },
     { key: 'purchaser', label: 'Purchaser', plain: true, cls: 'ctr' },
     { key: 'date', label: 'Date of Receipt', plain: true, cls: 'ctr c-date' },
     { key: 'receiver', label: 'Receiver', plain: true, cls: 'ctr' },
+    { key: 'releaseStatus', label: 'Status of Release', plain: true, cls: 'ctr', only: 'out' },
+    { key: 'recipient', label: 'Recipient', plain: true, cls: 'ctr', only: 'out' },
     { key: 'qty', label: 'Quantity', plain: true, cls: 'num' },
     { key: 'storage', label: 'Storage Code', plain: true, cls: 'ctr' },
     { key: 'giftable', label: 'Giftable', cls: 'ctr c-gift' },
@@ -602,6 +618,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
   /* ---------- Data mapping ---------- */
   function fromRow(r) {
     return {
+      inventoryId: r.inventory_id || '', releaseStatus: r.release_status || '', recipient: r.recipient || '',
       id: r.id, serial: r.serial_no, category: r.category, categoryCode: r.category_code || '',
       brand: r.brand_name, type: r.type_expression || '', purchaser: r.purchaser,
       date: r.date_of_receipt, receiver: r.receiver, qty: r.quantity, unit: r.quantity_unit || '', storage: r.storage_code || '',
@@ -610,12 +627,18 @@ td.num { padding-left: 8px; padding-right: 8px; }
     };
   }
   function toRow(d) {
-    return {
+    var o = {
       category: d.category, brand_name: d.brand,
       type_expression: d.type, purchaser: d.purchaser, date_of_receipt: d.date, receiver: d.receiver,
       quantity: d.qty, quantity_unit: d.unit, storage_code: d.storage, giftable: d.giftable, detail: d.detail,
       latest_status: d.status
     };
+    if (cur === 'out') {
+      /* Stock OUT has no Purchaser, Storage Code or Giftable; it has three release fields. */
+      delete o.purchaser; delete o.storage_code; delete o.giftable;
+      o.inventory_id = d.inventoryId; o.release_status = d.releaseStatus; o.recipient = d.recipient;
+    }
+    return o;
   }
   function upsertLocal(rec, key) {
     var arr = lists[key || cur].records;
@@ -653,13 +676,18 @@ td.num { padding-left: 8px; padding-right: 8px; }
   }
 
   /* ---------- Table ---------- */
-  function isHidden(key) { return (LISTS[cur].hide || []).indexOf(key) >= 0; }
+  function isHidden(key) {
+    if ((LISTS[cur].hide || []).indexOf(key) >= 0) return true;
+    for (var i = 0; i < COLS.length; i++) if (COLS[i].key === key && COLS[i].only && COLS[i].only !== cur) return true;
+    return false;
+  }
+  function colLabel(key, dflt) { return ((LISTS[cur].labels || {})[key]) || dflt; }
   function buildHead() {
     var h = '';
     COLS.forEach(function (c) {
       if (isHidden(c.key)) return;
       var cls = [c.cls || '', c.plain ? 'plain' : ''].join(' ').trim();
-      if (c.plain) h += '<th class="' + cls + '" scope="col">' + c.label + '</th>';
+      if (c.plain) h += '<th class="' + cls + '" scope="col">' + colLabel(c.key, c.label) + '</th>';
       else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"' + (c.title ? ' title="' + c.title + '"' : '') + '><button type="button" class="sortbtn" data-sort="' + c.key + '"' + (c.title ? ' aria-label="' + c.title + '"' : '') + '>' + c.label + '<span class="arrow"></span></button></th>';
     });
     h += '<th class="plain" scope="col"><span style="position:absolute;left:-9999px">Actions</span></th>';
@@ -686,7 +714,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
       if (ui.gift !== 'all' && r.giftable !== ui.gift) return false;
       if (ui.status !== 'all' && r.status !== ui.status) return false;
       if (q) {
-        var hay = [r.serial, r.category, r.categoryCode, r.brand, r.type, r.purchaser, r.date, r.receiver, r.qty, r.unit, r.storage, r.giftable, r.detail, r.status].join(' ').toLowerCase();
+        var hay = [r.serial, r.category, r.categoryCode, r.brand, r.type, r.purchaser, r.date, r.receiver, r.inventoryId, r.releaseStatus, r.recipient, r.qty, r.unit, r.storage, r.giftable, r.detail, r.status].join(' ').toLowerCase();
         if (hay.indexOf(q) === -1) return false;
       }
       return true;
@@ -762,9 +790,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
         (isHidden('categoryCode') ? '' :         '<td class="mono c-code code-' + esc(String(r.categoryCode || '').slice(0, 2)) + '"><span class="cc-p">' + esc(String(r.categoryCode || '').replace(/[0-9]+$/, '')) + '</span><span class="cc-n">' + esc((String(r.categoryCode || '').match(/[0-9]+$/) || [''])[0]) + '</span></td>') +
         '<td class="c-brand"><span class="clamp3">' + esc(r.brand) + '</span>' + copyBtn('brand', r.brand) + '</td>' +
         '<td class="c-type"><span class="clamp3">' + esc(r.type) + '</span>' + copyBtn('type', r.type) + '</td>' +
-        '<td class="ctr sm">' + esc(r.purchaser) + '</td>' +
+        (isHidden('inventoryId') ? '' : '<td class="ctr sm mono">' + (r.inventoryId ? esc(r.inventoryId) : '<span class="none">—</span>') + '</td>') +
+        (isHidden('purchaser') ? '' : '<td class="ctr sm">' + esc(r.purchaser) + '</td>') +
         '<td class="nowrap ctr sm c-date">' + fmtDate(r.date) + '</td>' +
         '<td class="ctr sm">' + esc(r.receiver) + '</td>' +
+        (isHidden('releaseStatus') ? '' : '<td class="ctr sm">' + (r.releaseStatus ? esc(r.releaseStatus) : '<span class="none">—</span>') + '</td>') +
+        (isHidden('recipient') ? '' : '<td class="ctr sm">' + (r.recipient ? esc(r.recipient) : '<span class="none">—</span>') + '</td>') +
         '<td class="num sm">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
         (isHidden('storage') ? '' : '<td class="mono ctr sm">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>') +
         (isHidden('giftable') ? '' : '<td class="ctr sm c-gift ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>') +
@@ -1209,9 +1240,13 @@ td.num { padding-left: 8px; padding-right: 8px; }
     clearErrors();
     var r = id ? state.records.filter(function (x) { return x.id === id; })[0] : null;
     els.title.textContent = (r ? 'Edit ' : 'Add ') + LISTS[cur].noun;
-    [['categoryCode', 'f-code'], ['storage', 'f-storage'], ['giftable', 'lbl-gift']].forEach(function (p) {
+    [['categoryCode', 'f-code'], ['storage', 'f-storage'], ['giftable', 'lbl-gift'], ['purchaser', 'f-purchaser']].forEach(function (p) {
       $(p[1]).closest('.field').hidden = isHidden(p[0]);
     });
+    Array.prototype.forEach.call(els.form.querySelectorAll('.field[data-only]'), function (f) { f.hidden = f.getAttribute('data-only') !== cur; });
+    $('lb-date').innerHTML = colLabel('date', 'Date of Receipt') + ' <span class="req">*</span>';
+    $('lb-receiver').innerHTML = colLabel('receiver', 'Receiver') + ' <span class="req">*</span>';
+    setVal('f-invid', r ? r.inventoryId : ''); setVal('f-relstatus', r ? r.releaseStatus : ''); setVal('f-recipient', r ? r.recipient : '');
     els.saveBtn.textContent = r ? 'Save changes' : 'Save ' + LISTS[cur].noun;
     setVal('f-serial', r ? r.serial : nextSerial());
     setVal('f-date', r ? r.date : todayISO());
@@ -1242,14 +1277,15 @@ td.num { padding-left: 8px; padding-right: 8px; }
       purchaser: $('f-purchaser').value.trim(), receiver: $('f-receiver').value.trim(),
       qty: parseInt($('f-qty').value, 10), unit: $('f-unit').value.trim(), storage: $('f-storage').value.trim(),
       giftable: (els.form.querySelector('input[name="giftable"]:checked') || {}).value || 'Unknown',
-      detail: $('f-detail').value.trim(), status: $('f-status').value
+      detail: $('f-detail').value.trim(), status: $('f-status').value,
+      inventoryId: $('f-invid').value.trim(), releaseStatus: $('f-relstatus').value.trim(), recipient: $('f-recipient').value.trim()
     };
     var errs = {};
-    if (!d.date) errs.date = 'Choose the date of receipt.';
+    if (!d.date) errs.date = cur === 'out' ? 'Choose the date of release.' : 'Choose the date of receipt.';
     if (!d.category) errs.category = 'Choose a category.';
     if (!d.brand) errs.brand = 'Enter a brand name.';
-    if (!d.purchaser) errs.purchaser = 'Enter who bought it.';
-    if (!d.receiver) errs.receiver = 'Enter who received it.';
+    if (!d.purchaser && !isHidden('purchaser')) errs.purchaser = 'Enter who bought it.';
+    if (!d.receiver) errs.receiver = cur === 'out' ? 'Choose who is in charge.' : 'Enter who received it.';
     if (!(d.qty >= 1)) errs.qty = 'Enter a quantity of 1 or more.';
     var keys = Object.keys(errs);
     if (keys.length) {
@@ -1284,22 +1320,34 @@ td.num { padding-left: 8px; padding-right: 8px; }
   $('exportBtn').addEventListener('click', function () {
     if (!window.XLSX) { toast('Excel export did not load. Reload the page and try again.'); return; }
     if (!state.records.length) { toast('Nothing to export yet'); return; }
-    var head = ['Serial No.', 'Category', 'Category Code', 'Brand Name', 'Type / Expression', 'Purchaser',
-      'Date of Receipt', 'Receiver', 'Quantity', 'Unit', 'Storage Code', 'Giftable', 'Detail', 'Latest Status'];
-    var skip = { 2: isHidden('categoryCode'), 10: isHidden('storage'), 11: isHidden('giftable') };
+    var dateStamp = function (r) { var p = String(r.date || '').split('-').map(Number); return p[0] ? new Date(Date.UTC(p[0], p[1] - 1, p[2])) : ''; };
+    var defs = [
+      ['serial', 'Serial No.', 10, function (r) { return Number(r.serial); }],
+      ['category', 'Category', 14, function (r) { return r.category; }],
+      ['categoryCode', 'Category Code', 14, function (r) { return r.categoryCode; }],
+      ['brand', 'Brand Name', 18, function (r) { return r.brand; }],
+      ['type', 'Type / Expression', 26, function (r) { return r.type; }],
+      ['inventoryId', 'Inventory ID', 14, function (r) { return r.inventoryId; }],
+      ['purchaser', 'Purchaser', 14, function (r) { return r.purchaser; }],
+      ['date', colLabel('date', 'Date of Receipt'), 16, dateStamp],
+      ['receiver', colLabel('receiver', 'Receiver'), 14, function (r) { return r.receiver; }],
+      ['releaseStatus', 'Status of Release', 18, function (r) { return r.releaseStatus; }],
+      ['recipient', 'Recipient', 16, function (r) { return r.recipient; }],
+      ['qty', 'Quantity', 10, function (r) { return Number(r.qty); }],
+      ['unit', 'Unit', 8, function (r) { return r.unit; }],
+      ['storage', 'Storage Code', 14, function (r) { return r.storage; }],
+      ['giftable', 'Giftable', 10, function (r) { return r.giftable; }],
+      ['detail', 'Detail', 40, function (r) { return r.detail; }],
+      ['status', 'Latest Status', 14, function (r) { return r.status; }]
+    ].filter(function (d) { return !isHidden(d[0]); });
+    var head = defs.map(function (d) { return d[1]; });
+    var widths = defs.map(function (d) { return d[2]; });
+    var dateCol = defs.map(function (d) { return d[0]; }).indexOf('date');
     var recs = state.records.slice().sort(function (a, b) { return (Number(a.serial) || 0) - (Number(b.serial) || 0); });
-    var rows = recs.map(function (r) {
-      var p = String(r.date || '').split('-').map(Number);
-      return [Number(r.serial), r.category, r.categoryCode, r.brand, r.type, r.purchaser,
-        p[0] ? new Date(Date.UTC(p[0], p[1] - 1, p[2])) : '', r.receiver, Number(r.qty), r.unit, r.storage,
-        r.giftable, r.detail, r.status];
-    });
-    var widths = [10, 14, 14, 18, 26, 14, 16, 14, 10, 8, 14, 10, 40, 14];
-    function keep(row) { return row.filter(function (v, i) { return !skip[i]; }); }
-    head = keep(head); rows = rows.map(keep); widths = keep(widths);
+    var rows = recs.map(function (r) { return defs.map(function (d) { return d[3](r); }); });
     var ws = XLSX.utils.aoa_to_sheet([head].concat(rows), { cellDates: true });
     for (var i = 1; i <= rows.length; i++) {
-      var c = ws[XLSX.utils.encode_cell({ r: i, c: skip[2] ? 5 : 6 })];
+      var c = ws[XLSX.utils.encode_cell({ r: i, c: dateCol })];
       if (c && c.t === 'd') c.z = 'yyyy-mm-dd';
     }
     ws['!cols'] = widths.map(function (w) { return { wch: w }; });

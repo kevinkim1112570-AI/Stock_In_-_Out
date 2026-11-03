@@ -270,3 +270,13 @@ insert into public.app_staff (slot, name) values
 --     check (category_code ~ '^[A-Z]{2,4}r[0-9]+$');
 -- and assign_stock_out_numbers() builds the code as prefix || 'r' || next_n, counting
 -- only codes that match '^' || prefix || 'r[0-9]+$'. Existing rows were renamed TL1 -> TLr1.
+
+-- Stock OUT List: Date of Receipt is shown as Date of Release (same column) and
+-- Receiver as In-charge (same column). Purchaser, Storage Code and Giftable are no
+-- longer used there. Three new free-text columns. Applied as migration stock_out_release_columns.
+alter table public.stock_out
+  add column inventory_id text not null default '',
+  add column release_status text not null default '',
+  add column recipient text not null default '';
+alter table public.stock_out drop constraint stock_out_purchaser_check;
+alter table public.stock_out alter column purchaser set default '';
