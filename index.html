@@ -303,6 +303,28 @@ td.num { padding-left: 8px; padding-right: 8px; }
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
 .tab:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* Dashboard page */
+.dash-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.panel h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.panel .hint { color: var(--ink-2); font-size: 15px; }
+.panel-foot { display: flex; justify-content: flex-end; }
+.grid-scroll { overflow-x: auto; padding-bottom: 1px; }
+.gridtab { min-width: 0; width: 100%; border-collapse: collapse; font-size: 18px; }
+.gridtab th { text-align: center; padding: 10px 8px; font-size: 13.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-2); background: var(--hover); border: 1px solid var(--line); position: static; white-space: nowrap; }
+.gridtab td { padding: 0; border: 1px solid var(--line); background: var(--field); }
+.gridtab tbody tr { height: 56px; }
+.gridtab tbody tr:hover td { background: var(--field); }
+.cellinput { display: block; width: 100%; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  padding: 14px 10px; text-align: center; font-size: 18px; }
+.cellinput:focus { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: none; border: 0; }
+.cellinput.name { font-weight: 600; }
+.cellinput.code { font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; }
+.cellinput.desc { text-align: left; }
+.cellinput[aria-invalid="true"] { background: var(--accent-tint); }
+@media (max-width: 900px) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
 <body>
@@ -377,6 +399,42 @@ td.num { padding-left: 8px; padding-right: 8px; }
   </div>
 </div>
 
+<div class="wrap" id="dash" hidden>
+  <header class="top">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="sub">The category and staff lists used by every form.</p>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="linkbtn" id="dashBack">&larr; Back to lists</button>
+    </div>
+  </header>
+  <div class="dash-grid">
+    <section class="panel" aria-labelledby="catH">
+      <div class="panel-head"><h2 id="catH">Category List</h2><span class="hint">Up to 8 categories</span></div>
+      <div class="grid-scroll">
+        <table class="gridtab">
+          <thead><tr><th scope="col">Category</th><th scope="col">Code</th><th scope="col">Description</th></tr></thead>
+          <tbody id="catBody"></tbody>
+        </table>
+      </div>
+      <p class="err" id="catErr" role="alert"></p>
+      <div class="panel-foot"><button type="button" class="btn primary" id="catSave">Save Category List</button></div>
+    </section>
+    <section class="panel" aria-labelledby="staffH">
+      <div class="panel-head"><h2 id="staffH">Staff List</h2><span class="hint">Up to 12 people</span></div>
+      <div class="grid-scroll">
+        <table class="gridtab">
+          <thead><tr><th scope="col">Name</th></tr></thead>
+          <tbody id="staffBody"></tbody>
+        </table>
+      </div>
+      <p class="err" id="staffErr" role="alert"></p>
+      <div class="panel-foot"><button type="button" class="btn primary" id="staffSave">Save Staff List</button></div>
+    </section>
+  </div>
+</div>
+
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden>
   <form id="form" novalidate>
@@ -397,14 +455,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
       </div>
       <div class="field">
         <label for="f-category">Category <span class="req">*</span></label>
-        <select id="f-category" name="category">
-          <option value="">Select a category</option>
-          <option value="酒类">酒类</option>
-          <option value="茶类">茶类</option>
-          <option value="礼品饰品类">礼品饰品类</option>
-          <option value="橙皮类">橙皮类</option>
-          <option value="茶具类">茶具类</option>
-        </select>
+        <select id="f-category" name="category"></select>
         <span class="err" id="err-category"></span>
       </div>
       <div class="field">
@@ -423,12 +474,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
       </div>
       <div class="field">
         <label for="f-purchaser">Purchaser <span class="req">*</span></label>
-        <input id="f-purchaser" name="purchaser" list="dl-people" autocomplete="off">
+        <select id="f-purchaser" name="purchaser"></select>
         <span class="err" id="err-purchaser"></span>
       </div>
       <div class="field">
         <label for="f-receiver">Receiver <span class="req">*</span></label>
-        <input id="f-receiver" name="receiver" list="dl-people" autocomplete="off">
+        <select id="f-receiver" name="receiver"></select>
         <span class="err" id="err-receiver"></span>
       </div>
       <div class="field">
@@ -470,7 +521,6 @@ td.num { padding-left: 8px; padding-right: 8px; }
   </form>
 </aside>
 
-<datalist id="dl-people"></datalist>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.75.0/dist/umd/supabase.js"></script>
@@ -495,10 +545,6 @@ td.num { padding-left: 8px; padding-right: 8px; }
   Object.keys(LISTS).forEach(function (k) { lists[k] = { records: [], loaded: false }; });
   var cur = 'in';
   var STATUSES = ['In stock', 'Reserved', 'Given out', 'Used', 'Damaged'];
-  var CATEGORIES = [
-    { name: '酒类', code: 'LW' }, { name: '茶类', code: 'TL' }, { name: '礼品饰品类', code: 'GP' },
-    { name: '橙皮类', code: 'OP' }, { name: '茶具类', code: 'TW' }
-  ];
   var COLS = [
     { key: 'serial', label: 'SN', title: 'Serial No.', cls: 'c-serial' },
     { key: 'category', label: 'Category', cls: 'c-cat' },
@@ -721,24 +767,12 @@ td.num { padding-left: 8px; padding-right: 8px; }
     } else els.empty.hidden = true;
 
     paintHead();
-    refreshLists();
+    syncCategoryFilter();
     fitDetails();
-  }
-
-  function refreshLists() {
-    function uniq(key) {
-      var seen = {}, out = [];
-      state.records.forEach(function (r) { var v = (r[key] || '').trim(); if (v && !seen[v.toLowerCase()]) { seen[v.toLowerCase()] = 1; out.push(v); } });
-      return out.sort();
-    }
-    function opts(arr) { return arr.map(function (v) { return '<option value="' + esc(v) + '">'; }).join(''); }
-    var people = uniq('purchaser').concat(uniq('receiver')).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
-    $('dl-people').innerHTML = opts(people);
   }
 
   /* ---------- Filters and sorting ---------- */
   function buildStatusFilter() {
-    els.categoryFilter.innerHTML = '<option value="all">All categories</option>' + CATEGORIES.map(function (c) { return '<option value="' + c.name + '">' + c.name + '</option>'; }).join('');
     els.statusFilter.innerHTML = '<option value="all">All statuses</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
     $('f-status').innerHTML = STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
   }
@@ -836,12 +870,15 @@ td.num { padding-left: 8px; padding-right: 8px; }
     Object.keys(LISTS).forEach(function (k) {
       ch = ch.on('postgres_changes', { event: '*', schema: 'public', table: LISTS[k].table }, onChange);
     });
+    ch = ch.on('postgres_changes', { event: '*', schema: 'public', table: 'app_categories' }, onConfigEvent)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_staff' }, onConfigEvent);
     ui.channel = ch.subscribe(function (status) {
       if (status === 'SUBSCRIBED') {
         setLive('live');
         if (ui.subscribedOnce) {
           Object.keys(lists).forEach(function (k) { if (k !== cur) lists[k].loaded = false; });
           loadAll(cur);
+          loadConfig();
         }
         ui.subscribedOnce = true;
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -854,11 +891,172 @@ td.num { padding-left: 8px; padding-right: 8px; }
     ui.subscribedOnce = false;
   }
 
+  /* ---------- Category List and Staff List (Dashboard) ---------- */
+  var cfg = { categories: [], staff: [] };
+  var dash = { dirty: false };
+  var view = 'lists';
+  var cfgTimer;
+
+  function catNames() {
+    return cfg.categories.filter(function (c) { return c.name; }).map(function (c) { return c.name; });
+  }
+  function staffNames() {
+    return cfg.staff.filter(function (x) { return x.name; }).map(function (x) { return x.name; });
+  }
+  function optionsHtml(values, current, blank) {
+    var list = values.slice();
+    if (current && list.indexOf(current) < 0) list.push(current);
+    return '<option value="">' + blank + '</option>' + list.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+  }
+  /* A record keeps its old value in the dropdown even if it was later taken off the list */
+  function buildFormSelects(sel) {
+    $('f-category').innerHTML = optionsHtml(catNames(), sel.category, 'Select a category');
+    $('f-category').value = sel.category || '';
+    $('f-purchaser').innerHTML = optionsHtml(staffNames(), sel.purchaser, 'Select a person');
+    $('f-purchaser').value = sel.purchaser || '';
+    $('f-receiver').innerHTML = optionsHtml(staffNames(), sel.receiver, 'Select a person');
+    $('f-receiver').value = sel.receiver || '';
+  }
+  function syncCategoryFilter() {
+    var names = catNames();
+    state.records.forEach(function (r) { if (r.category && names.indexOf(r.category) < 0) names.push(r.category); });
+    var key = names.join('|');
+    if (key === ui.catFilterKey) return;
+    ui.catFilterKey = key;
+    els.categoryFilter.innerHTML = '<option value="all">All categories</option>' + names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+    if (ui.category !== 'all' && names.indexOf(ui.category) < 0) ui.category = 'all';
+    els.categoryFilter.value = ui.category;
+  }
+
+  function buildDash() {
+    var i, c = '', st = '';
+    for (i = 1; i <= 8; i++) {
+      c += '<tr><td><input class="cellinput name" id="cat-name-' + i + '" aria-label="Category ' + i + ' name" autocomplete="off"></td>' +
+        '<td><input class="cellinput code" id="cat-code-' + i + '" aria-label="Category ' + i + ' code" maxlength="4" autocomplete="off" autocapitalize="characters"></td>' +
+        '<td><input class="cellinput desc" id="cat-desc-' + i + '" aria-label="Category ' + i + ' description" autocomplete="off"></td></tr>';
+    }
+    for (i = 1; i <= 12; i++) {
+      st += '<tr><td><input class="cellinput name" id="staff-' + i + '" aria-label="Staff ' + i + ' name" autocomplete="off"></td></tr>';
+    }
+    $('catBody').innerHTML = c;
+    $('staffBody').innerHTML = st;
+  }
+  function fillDash(force) {
+    if (dash.dirty && !force) return;
+    var i;
+    for (i = 1; i <= 8; i++) {
+      var c = cfg.categories.filter(function (x) { return x.slot === i; })[0] || {};
+      $('cat-name-' + i).value = c.name || '';
+      $('cat-code-' + i).value = c.code || '';
+      $('cat-desc-' + i).value = c.description || '';
+    }
+    for (i = 1; i <= 12; i++) {
+      var p = cfg.staff.filter(function (x) { return x.slot === i; })[0] || {};
+      $('staff-' + i).value = p.name || '';
+    }
+    dash.dirty = false;
+  }
+  function onConfigChanged() {
+    syncCategoryFilter();
+    if (!els.drawer.hidden) {
+      buildFormSelects({ category: $('f-category').value, purchaser: $('f-purchaser').value, receiver: $('f-receiver').value });
+      updatePreview();
+    }
+    fillDash(false);
+  }
+  async function loadConfig() {
+    try {
+      var a = await sb.from('app_categories').select('*').order('slot');
+      var b = await sb.from('app_staff').select('*').order('slot');
+      if (a.error || b.error) throw (a.error || b.error);
+      cfg.categories = a.data; cfg.staff = b.data;
+    } catch (e) { return; }
+    onConfigChanged();
+  }
+  function onConfigEvent() { clearTimeout(cfgTimer); cfgTimer = setTimeout(loadConfig, 250); }
+
+  function clearDashErrors() {
+    $('catErr').textContent = ''; $('staffErr').textContent = '';
+    Array.prototype.forEach.call(document.querySelectorAll('#dash [aria-invalid]'), function (e) { e.removeAttribute('aria-invalid'); });
+  }
+  function dashFail(errId, inputId, msg) {
+    $(errId).textContent = msg;
+    var el = $(inputId); el.setAttribute('aria-invalid', 'true'); el.focus();
+    return false;
+  }
+  async function saveCategories() {
+    clearDashErrors();
+    var rows = [], seenName = {}, seenCode = {}, i;
+    for (i = 1; i <= 8; i++) {
+      var name = $('cat-name-' + i).value.trim(), code = $('cat-code-' + i).value.trim().toUpperCase(), desc = $('cat-desc-' + i).value.trim();
+      if (!name && !code && !desc) { rows.push({ slot: i, name: null, code: null, description: '' }); continue; }
+      if (!name) return dashFail('catErr', 'cat-name-' + i, 'Row ' + i + ': enter the category name.');
+      if (!/^[A-Z]{2,4}$/.test(code)) return dashFail('catErr', 'cat-code-' + i, 'Row ' + i + ': enter a code of 2 to 4 letters.');
+      if (seenName[name.toLowerCase()]) return dashFail('catErr', 'cat-name-' + i, 'Row ' + i + ': the name is already used in row ' + seenName[name.toLowerCase()] + '.');
+      if (seenCode[code]) return dashFail('catErr', 'cat-code-' + i, 'Row ' + i + ': the code is already used in row ' + seenCode[code] + '.');
+      seenName[name.toLowerCase()] = i; seenCode[code] = i;
+      rows.push({ slot: i, name: name, code: code, description: desc });
+    }
+    var btn = $('catSave'); btn.disabled = true; btn.textContent = 'Saving…';
+    var res = await sb.from('app_categories').upsert(rows, { onConflict: 'slot' });
+    btn.disabled = false; btn.textContent = 'Save Category List';
+    if (res.error) {
+      $('catErr').textContent = res.error.code === '23505' ? 'Two rows use the same name or code.' : 'Could not save. Check your connection and try again.';
+      return;
+    }
+    dash.dirty = false;
+    toast('Category List saved');
+    loadConfig();
+  }
+  async function saveStaff() {
+    clearDashErrors();
+    var rows = [], seen = {}, i;
+    for (i = 1; i <= 12; i++) {
+      var name = $('staff-' + i).value.trim();
+      if (name && seen[name.toLowerCase()]) return dashFail('staffErr', 'staff-' + i, 'Row ' + i + ': the name is already used in row ' + seen[name.toLowerCase()] + '.');
+      if (name) seen[name.toLowerCase()] = i;
+      rows.push({ slot: i, name: name || null });
+    }
+    var btn = $('staffSave'); btn.disabled = true; btn.textContent = 'Saving…';
+    var res = await sb.from('app_staff').upsert(rows, { onConflict: 'slot' });
+    btn.disabled = false; btn.textContent = 'Save Staff List';
+    if (res.error) {
+      $('staffErr').textContent = res.error.code === '23505' ? 'Two rows use the same name.' : 'Could not save. Check your connection and try again.';
+      return;
+    }
+    dash.dirty = false;
+    toast('Staff List saved');
+    loadConfig();
+  }
+  $('catSave').addEventListener('click', saveCategories);
+  $('staffSave').addEventListener('click', saveStaff);
+  $('dash').addEventListener('input', function (e) {
+    dash.dirty = true;
+    if (e.target.classList.contains('code')) e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  });
+
+  /* ---------- Views: lists or Dashboard ---------- */
+  function applyView() {
+    els.app.hidden = view !== 'lists';
+    $('dash').hidden = view !== 'dash';
+    if (view === 'dash') fillDash(false);
+  }
+  $('menuBtn').addEventListener('click', function () { window.location.hash = '#dashboard'; });
+  $('dashBack').addEventListener('click', function () { window.location.hash = LISTS[cur].hash ? '#' + LISTS[cur].hash : ''; });
+  window.addEventListener('hashchange', function () {
+    if (!ui.userId) return;
+    var h = String(window.location.hash || '').replace('#', '');
+    if (h === 'dashboard') { view = 'dash'; applyView(); return; }
+    view = 'lists'; applyView();
+    var k = listFromHash();
+    if (k !== cur) switchList(k);
+  });
+
   /* ---------- Sign in and out ---------- */
-  function showApp() { els.auth.hidden = true; els.app.hidden = false; }
+  function showApp() { els.auth.hidden = true; applyView(); }
   function showAuth() {
     els.drawer.hidden = true; els.scrim.hidden = true;
-    els.app.hidden = true; els.auth.hidden = false;
+    els.app.hidden = true; $('dash').hidden = true; els.auth.hidden = false;
     setTimeout(function () { $('a-email').focus(); }, 0);
   }
   async function handleSession(session) {
@@ -866,16 +1064,18 @@ td.num { padding-left: 8px; padding-right: 8px; }
       $('who').textContent = session.user.email || '';
       if (ui.userId !== session.user.id) {
         ui.userId = session.user.id;
+        view = String(window.location.hash || '').replace('#', '') === 'dashboard' ? 'dash' : 'lists';
         showApp();
         cur = listFromHash();
         applyListUI();
         subscribe();
-        await loadAll(cur);
+        await Promise.all([loadConfig(), loadAll(cur)]);
       }
     } else {
       ui.userId = null;
       unsubscribe();
       Object.keys(lists).forEach(function (k) { lists[k].records = []; lists[k].loaded = false; });
+      cfg.categories = []; cfg.staff = []; dash.dirty = false;
       showAuth();
     }
   }
@@ -957,7 +1157,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     return String(max + 1);
   }
   function prefixFor(cat) {
-    for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].name === cat) return CATEGORIES[i].code;
+    for (var i = 0; i < cfg.categories.length; i++) if (cfg.categories[i].name === cat) return cfg.categories[i].code || '';
     return '';
   }
   /* Preview only. The database assigns the real serial number and code when saving. */
@@ -992,12 +1192,10 @@ td.num { padding-left: 8px; padding-right: 8px; }
     els.saveBtn.textContent = r ? 'Save changes' : 'Save ' + LISTS[cur].noun;
     setVal('f-serial', r ? r.serial : nextSerial());
     setVal('f-date', r ? r.date : todayISO());
-    setVal('f-category', r ? r.category : '');
+    buildFormSelects({ category: r ? r.category : '', purchaser: r ? r.purchaser : '', receiver: r ? r.receiver : '' });
     setVal('f-code', r ? r.categoryCode : '');
     setVal('f-brand', r ? r.brand : '');
     setVal('f-type', r ? r.type : '');
-    setVal('f-purchaser', r ? r.purchaser : '');
-    setVal('f-receiver', r ? r.receiver : '');
     setVal('f-qty', r ? r.qty : '');
     setVal('f-unit', r ? r.unit : '');
     setVal('f-storage', r ? r.storage : '');
@@ -1093,6 +1291,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
   /* ---------- Start ---------- */
   buildHead();
   buildStatusFilter();
+  buildDash();
   render();
   if (!sb) {
     showAuth();

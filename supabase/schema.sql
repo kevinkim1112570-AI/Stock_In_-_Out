@@ -209,3 +209,56 @@ begin
   end loop;
 end
 $mig$;
+
+-- ---------------------------------------------------------------------------
+-- Dashboard: the editable Category List (8 slots) and Staff List (12 slots).
+-- The Category List replaces the fixed five categories. The number prefix of a
+-- new record comes from here. The assign_*_numbers functions above are replaced
+-- so the prefix is read from app_categories (category must be on the list), and
+-- the old category check and code-format check on the three stock tables are
+-- replaced by a plain "2 to 4 capital letters then digits" check.
+-- (Applied to the live project as migrations; the functions use:
+--    select code into prefix from public.app_categories where name = new.category;
+--    ... where category_code ~ ('^' || prefix || '[0-9]+$') )
+-- ---------------------------------------------------------------------------
+create table public.app_categories (
+  slot integer primary key check (slot between 1 and 8),
+  name text,
+  code text,
+  description text not null default '',
+  updated_at timestamptz not null default now(),
+  constraint app_categories_filled check (
+    (name is null and code is null)
+    or (coalesce(length(btrim(name)), 0) > 0 and coalesce(code ~ '^[A-Z]{2,4}$', false))),
+  constraint app_categories_name_key unique (name) deferrable initially deferred,
+  constraint app_categories_code_key unique (code) deferrable initially deferred
+);
+
+create table public.app_staff (
+  slot integer primary key check (slot between 1 and 12),
+  name text check (name is null or length(btrim(name)) > 0),
+  updated_at timestamptz not null default now(),
+  constraint app_staff_name_key unique (name) deferrable initially deferred
+);
+
+alter table public.app_categories enable row level security;
+alter table public.app_staff enable row level security;
+revoke all on public.app_categories, public.app_staff from anon;
+
+create policy "Signed-in team can view categories" on public.app_categories for select to authenticated using ((select auth.uid()) is not null);
+create policy "Signed-in team can add categories" on public.app_categories for insert to authenticated with check ((select auth.uid()) is not null);
+create policy "Signed-in team can edit categories" on public.app_categories for update to authenticated using ((select auth.uid()) is not null) with check ((select auth.uid()) is not null);
+create policy "Signed-in team can view staff" on public.app_staff for select to authenticated using ((select auth.uid()) is not null);
+create policy "Signed-in team can add staff" on public.app_staff for insert to authenticated with check ((select auth.uid()) is not null);
+create policy "Signed-in team can edit staff" on public.app_staff for update to authenticated using ((select auth.uid()) is not null) with check ((select auth.uid()) is not null);
+
+alter publication supabase_realtime add table public.app_categories, public.app_staff;
+
+-- Starting data: the five original categories and the names from the staff sheet.
+insert into public.app_categories (slot, name, code, description) values
+  (1, '酒类', 'LW', 'Liquid & Wine'), (2, '茶类', 'TL', 'Tea Leaf'),
+  (3, '礼品饰品类', 'GP', 'Gift & Present'), (4, '橙皮类', 'OP', 'Orange Peel'),
+  (5, '茶具类', 'TW', 'Tea Ware'), (6, null, null, ''), (7, null, null, ''), (8, null, null, '');
+insert into public.app_staff (slot, name) values
+  (1, '老板'), (2, '美龄'), (3, 'Philip'), (4, 'LK'), (5, 'YK'), (6, 'Yazi'), (7, 'Kevin'), (8, 'William'),
+  (9, null), (10, null), (11, null), (12, null);

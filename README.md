@@ -18,17 +18,26 @@ All three have the same columns and the same numbering rules. Each counts its ow
 
 ## Numbering and categories
 
-- **Category** is a dropdown with five choices: 酒类 (LW), 茶类 (TL), 礼品饰品类 (GP), 橙皮类 (OP) and 茶具类 (TW).
+- **Category** is a dropdown filled from the Category List on the Dashboard (up to 8). It starts with 酒类 (LW), 茶类 (TL), 礼品饰品类 (GP), 橙皮类 (OP) and 茶具类 (TW).
 - **Category Code** cannot be typed. It fills in after you pick a category: the prefix plus the next number in that category, for example TL1, TL2, TL3.
 - **Serial No.** is a plain number starting at 1 (the highest existing number plus 1).
 - Both numbers are assigned by the database when you save, so two people adding stock at the same moment never get the same number. Deleting the newest row frees its number for the next one.
+
+## Dashboard
+
+The **Dashboard** link (top right of every list) opens a page with two lists. Both are shared live and saved with their own **Save** button.
+
+- **Category List**: up to 8 rows of category name, 2 to 4 letter code, and description. The code is the prefix of the Category Code (TL becomes TL1, TL2...). The category dropdown and the category filter use this list.
+- **Staff List**: up to 12 names. The **Purchaser** and **Receiver** dropdowns use this list.
+
+Renaming a category or a person does not change records already saved; an old record keeps its old value and still shows it when edited. Table names: `app_categories` and `app_staff`.
 
 ## Files
 
 | File | Purpose |
 | --- | --- |
 | `index.html` | The whole app (HTML, CSS and JavaScript in one file) |
-| `supabase/schema.sql` | The table, security rules and realtime setup, for rebuilding the database |
+| `supabase/schema.sql` | The tables, security rules and realtime setup, for rebuilding the database |
 | `vercel.json` | Vercel settings: static site, no build step, basic security headers |
 | `.gitignore` | Keeps local and Vercel folders out of Git |
 
