@@ -564,7 +564,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     'unnumbered': { table: 'stock_in_unnumbered', hash: 'unnumbered', docTitle: 'Unnumbered Stock In List', title: 'Unnumbered Stock <b class="em">In</b> List',
       hide: ['categoryCode', 'storage', 'giftable'],
       sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Unnumbered-Stock-In-List', sheet: 'Unnumbered Stock In' },
-    'out': { table: 'stock_out', hash: 'out', release: true, hide: ['purchaser', 'storage', 'giftable'], labels: { date: 'Date of Release', receiver: 'In-charge' },
+    'out': { table: 'stock_out', hash: 'out', release: true, hide: ['purchaser', 'storage', 'giftable', 'status'], labels: { date: 'Date of Release', receiver: 'In-charge' },
       docTitle: 'Stock OUT List', title: 'Stock <b class="em">OUT</b> List',
       sub: 'Every stock-out the team has recorded, shared live.', noun: 'Stock-Out', file: 'Stock-OUT-List', sheet: 'Stock OUT' }
   };
@@ -635,7 +635,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     };
     if (cur === 'out') {
       /* Stock OUT has no Purchaser, Storage Code or Giftable; it has three release fields. */
-      delete o.purchaser; delete o.storage_code; delete o.giftable;
+      delete o.purchaser; delete o.storage_code; delete o.giftable; delete o.latest_status;
       o.inventory_id = d.inventoryId; o.release_status = d.releaseStatus; o.recipient = d.recipient;
     }
     return o;
@@ -712,7 +712,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     return state.records.filter(function (r) {
       if (ui.category !== 'all' && r.category !== ui.category) return false;
       if (ui.gift !== 'all' && r.giftable !== ui.gift) return false;
-      if (ui.status !== 'all' && r.status !== ui.status) return false;
+      if (ui.status !== 'all' && (isHidden('status') ? r.releaseStatus : r.status) !== ui.status) return false;
       if (q) {
         var hay = [r.serial, r.category, r.categoryCode, r.brand, r.type, r.purchaser, r.date, r.receiver, r.inventoryId, r.releaseStatus, r.recipient, r.qty, r.unit, r.storage, r.giftable, r.detail, r.status].join(' ').toLowerCase();
         if (hay.indexOf(q) === -1) return false;
@@ -800,7 +800,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
         (isHidden('storage') ? '' : '<td class="mono ctr sm">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>') +
         (isHidden('giftable') ? '' : '<td class="ctr sm c-gift ' + (r.giftable === 'Yes' ? 'gift-yes' : 'gift-no') + '">' + esc(r.giftable) + '</td>') +
         '<td class="detail sm"><span class="dfit">' + esc(r.detail) + '</span>' + copyBtn('detail', r.detail) + '</td>' +
-        '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>' +
+        (isHidden('status') ? '' : '<td><span class="pill' + (r.status === 'In stock' ? ' in' : '') + '"><i></i>' + esc(r.status) + '</span></td>') +
         '<td class="actions"><button type="button" class="linkbtn" data-act="edit">Edit</button>' +
         '<button type="button" class="linkbtn' + (armed ? ' danger-arm' : '') + '" data-act="del">' + (armed ? 'Confirm delete' : 'Delete') + '</button></td>' +
         '</tr>';
@@ -886,6 +886,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     if (!LISTS[key] || key === cur) return;
     cur = key;
     ui.q = ''; ui.gift = 'all'; ui.status = 'all'; ui.category = 'all'; ui.pendingDelete = null;
+    if (isHidden(ui.sortKey)) { ui.sortKey = 'serial'; ui.dir = -1; }
     els.q.value = ''; els.giftFilter.value = 'all'; els.statusFilter.value = 'all'; els.categoryFilter.value = 'all';
     $('loadNote').hidden = true;
     applyListUI();
@@ -1241,7 +1242,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     clearErrors();
     var r = id ? state.records.filter(function (x) { return x.id === id; })[0] : null;
     els.title.textContent = (r ? 'Edit ' : 'Add ') + LISTS[cur].noun;
-    [['categoryCode', 'f-code'], ['storage', 'f-storage'], ['giftable', 'lbl-gift'], ['purchaser', 'f-purchaser']].forEach(function (p) {
+    [['categoryCode', 'f-code'], ['storage', 'f-storage'], ['giftable', 'lbl-gift'], ['purchaser', 'f-purchaser'], ['status', 'f-status']].forEach(function (p) {
       $(p[1]).closest('.field').hidden = isHidden(p[0]);
     });
     Array.prototype.forEach.call(els.form.querySelectorAll('.field[data-only]'), function (f) { f.hidden = f.getAttribute('data-only') !== cur; });
