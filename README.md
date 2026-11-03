@@ -14,7 +14,7 @@ The page has three tabs, each with its own table in Supabase, so records never m
 | Unnumbered Stock In List | `stock_in_unnumbered` |
 | Stock OUT List | `stock_out` |
 
-All three have the same columns and the same numbering rules. Each counts its own Serial No. and Category Codes from 1. The address ends in `#unnumbered` or `#out` for the second and third tab, so a tab can be bookmarked. Export downloads the list that is open.
+All three have the same columns and the same numbering rules, except that Stock OUT Category Codes have a lowercase r (release) after the letters: TLr1, TLr2, LWr1. Each counts its own Serial No. and Category Codes from 1. The address ends in `#unnumbered` or `#out` for the second and third tab, so a tab can be bookmarked. Export downloads the list that is open.
 
 ## Numbering and categories
 

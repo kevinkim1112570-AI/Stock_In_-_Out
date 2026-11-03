@@ -262,3 +262,11 @@ insert into public.app_categories (slot, name, code, description) values
 insert into public.app_staff (slot, name) values
   (1, '老板'), (2, '美龄'), (3, 'Philip'), (4, 'LK'), (5, 'YK'), (6, 'Yazi'), (7, 'Kevin'), (8, 'William'),
   (9, null), (10, null), (11, null), (12, null);
+
+-- Stock OUT List: Category Codes carry a lowercase r (release) after the letters,
+-- e.g. TLr1, LWr2. Applied as migration stock_out_release_code_r.
+--   alter table public.stock_out drop constraint stock_out_category_code_format;
+--   alter table public.stock_out add constraint stock_out_category_code_format
+--     check (category_code ~ '^[A-Z]{2,4}r[0-9]+$');
+-- and assign_stock_out_numbers() builds the code as prefix || 'r' || next_n, counting
+-- only codes that match '^' || prefix || 'r[0-9]+$'. Existing rows were renamed TL1 -> TLr1.

@@ -538,7 +538,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
       sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Stock-IN-List', sheet: 'Stock IN' },
     'unnumbered': { table: 'stock_in_unnumbered', hash: 'unnumbered', docTitle: 'Unnumbered Stock In List', title: 'Unnumbered Stock <b class="em">In</b> List',
       sub: 'Every stock-in the team has recorded, shared live.', noun: 'Stock-In', file: 'Unnumbered-Stock-In-List', sheet: 'Unnumbered Stock In' },
-    'out': { table: 'stock_out', hash: 'out', docTitle: 'Stock OUT List', title: 'Stock <b class="em">OUT</b> List',
+    'out': { table: 'stock_out', hash: 'out', release: true, docTitle: 'Stock OUT List', title: 'Stock <b class="em">OUT</b> List',
       sub: 'Every stock-out the team has recorded, shared live.', noun: 'Stock-Out', file: 'Stock-OUT-List', sheet: 'Stock OUT' }
   };
   var lists = {};
@@ -1164,6 +1164,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
   function previewCode(cat) {
     var p = prefixFor(cat);
     if (!p) return '';
+    if (LISTS[cur].release) p += 'r'; /* Stock OUT codes: letters + lowercase r + number */
     var editing = ui.editingId ? state.records.filter(function (x) { return x.id === ui.editingId; })[0] : null;
     if (editing && editing.category === cat) return editing.categoryCode;
     var max = 0;
