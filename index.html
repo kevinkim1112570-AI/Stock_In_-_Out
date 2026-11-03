@@ -501,7 +501,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
       </div>
       <div class="field" data-only="out">
         <label for="f-relstatus">Status of Release</label>
-        <input id="f-relstatus" name="releaseStatus" autocomplete="off">
+        <select id="f-relstatus" name="releaseStatus"></select>
       </div>
       <div class="field" data-only="out">
         <label for="f-recipient">Recipient</label>
@@ -822,6 +822,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
   function buildStatusFilter() {
     els.statusFilter.innerHTML = '<option value="all">All statuses</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
     $('f-status').innerHTML = STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
+    $('f-relstatus').innerHTML = '<option value="">Select a status</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
   }
   els.q.addEventListener('input', function () { ui.q = els.q.value; render(); });
   els.statusFilter.addEventListener('change', function () { ui.status = els.statusFilter.value; render(); });
