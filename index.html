@@ -794,7 +794,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
         (isHidden('purchaser') ? '' : '<td class="ctr sm">' + esc(r.purchaser) + '</td>') +
         '<td class="nowrap ctr sm c-date">' + fmtDate(r.date) + '</td>' +
         '<td class="ctr sm">' + esc(r.receiver) + '</td>' +
-        (isHidden('releaseStatus') ? '' : '<td class="ctr sm">' + (r.releaseStatus ? esc(r.releaseStatus) : '<span class="none">—</span>') + '</td>') +
+        (isHidden('releaseStatus') ? '' : '<td class="ctr">' + (r.releaseStatus ? '<span class="pill"><i></i>' + esc(r.releaseStatus) + '</span>' : '<span class="none">—</span>') + '</td>') +
         (isHidden('recipient') ? '' : '<td class="ctr sm">' + (r.recipient ? esc(r.recipient) : '<span class="none">—</span>') + '</td>') +
         '<td class="num sm">' + esc(r.qty) + (r.unit ? ' ' + esc(r.unit) : '') + '</td>' +
         (isHidden('storage') ? '' : '<td class="mono ctr sm">' + (r.storage ? esc(r.storage) : '<span class="none">—</span>') + '</td>') +
