@@ -27,10 +27,10 @@ All three share one layout and numbering rules, except that the Stock OUT List s
 
 The **Dashboard** link (top right of every list) opens a page with two lists. Both are shared live and saved with their own **Save** button.
 
-- **Category List**: up to 8 rows of category name, 2 to 4 letter code, and description. The code is the prefix of the Category Code (TL becomes TL1, TL2...). The category dropdown and the category filter use this list.
+- **Category List**: up to 8 rows of category name, 2 to 4 letter code, color and description. The color is picked from a Word-style palette and fills the Category Code cell in every list. Changing a code renames the codes of all existing records in that category (GP1 becomes GD1, GPr1 becomes GDr1); colors update everywhere at once. The code is the prefix of the Category Code (TL becomes TL1, TL2...). The category dropdown and the category filter use this list.
 - **Staff List**: up to 12 names. The **Purchaser** and **Receiver** dropdowns use this list.
 
-Renaming a category or a person does not change records already saved; an old record keeps its old value and still shows it when edited. Table names: `app_categories` and `app_staff`.
+Renaming a category or a person does not change the name saved in existing records (changing a code does update their Category Codes); an old record keeps its old value and still shows it when edited. Table names: `app_categories` and `app_staff`.
 
 ## Printing
 

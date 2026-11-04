@@ -280,3 +280,15 @@ alter table public.stock_out
   add column recipient text not null default '';
 alter table public.stock_out drop constraint stock_out_purchaser_check;
 alter table public.stock_out alter column purchaser set default '';
+
+-- Category colors and live code renaming (migration category_colors_and_code_sync).
+-- app_categories.color: hex such as #83C937, shown behind the Category Code in every list.
+alter table public.app_categories
+  add column color text check (color is null or color ~ '^#[0-9A-Fa-f]{6}$');
+-- The three assign_*_numbers functions start with
+--   if current_setting('app.renumber', true) = '1' then return new; end if;
+-- so sync_category_codes() can rewrite codes. When a category is added or its code
+-- changes, every record of that category in all three lists gets the new letters
+-- (GP1 -> GD1, and on Stock OUT GPr1 -> GDr1).
+-- See the migration for the full sync_category_codes() function and trigger
+-- app_categories_sync_codes (after insert or update of name, code).
