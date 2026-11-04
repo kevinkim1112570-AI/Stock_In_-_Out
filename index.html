@@ -339,6 +339,34 @@ th.c-relstatus .sortbtn { display: block; width: 100%; text-align: center; }
 #app .tab { padding-top: 6px; padding-bottom: 8px; }
 #app .toolbar { gap: 10px; }
 #app .toolbar input[type="search"], #app .toolbar select { padding-top: 8px; padding-bottom: 8px; }
+/* Printing: A4 landscape, every column except Edit/Delete, header row repeated on each page */
+@page { size: A4 landscape; margin: 8mm; }
+th .plabel { display: none; }
+@media print {
+  th .sortbtn { display: none !important; }
+  th .plabel { display: block; font-weight: 600; text-transform: uppercase; }
+  :root { --pad-y: 0px; }
+  html, body { background: #fff !important; padding: 0 !important; }
+  body { font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #app { height: auto !important; min-height: 0 !important; display: block; }
+  #dash, #auth, .scrim, .drawer, .toast, .toolbar, .tabs, .top-actions, #loadNote, .copybtn { display: none !important; }
+  #app .top { display: block; margin: 0 0 6px; }
+  #app h1 { font-size: 18px; }
+  .table-scroll { overflow: visible !important; border: 0; background: transparent; }
+  table { width: 100% !important; min-width: 0 !important; table-layout: auto; font-size: 9px; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  tbody tr { break-inside: avoid; page-break-inside: avoid; height: auto !important; }
+  thead th { position: static !important; padding: 0; background: #eee !important; border: 1px solid #999; white-space: normal; }
+  td, th { width: auto !important; min-width: 0 !important; max-width: none !important; left: auto !important; position: static !important; }
+  tbody td { padding: 3px 4px !important; border: 1px solid #bbb; font-size: 9px !important; background: transparent; }
+  tbody td.c-code { border-bottom: 1px solid #bbb !important; font-size: 10px !important; }
+  thead th .sortbtn, thead th { font-size: 8px; padding: 3px 3px !important; line-height: 1.2; letter-spacing: 0; }
+  thead th .arrow { display: none; }
+  thead th, thead th.plain, thead th .plabel { font-size: 8px !important; font-weight: 600 !important; letter-spacing: 0.02em !important; line-height: 1.2; padding: 3px 3px !important; text-align: center; }
+  #app thead th:last-child, #app tbody td:last-child { display: none !important; }
+  td.detail .dfit, .clamp3 { max-height: none !important; font-size: 9px !important; -webkit-line-clamp: unset; }
+  .pill { padding: 1px 6px; font-size: 9px; }
+}
 </style>
 </head>
 <body>
@@ -689,7 +717,7 @@ th.c-relstatus .sortbtn { display: block; width: 100%; text-align: center; }
       if (isHidden(c.key)) return;
       var cls = [c.cls || '', c.plain ? 'plain' : ''].join(' ').trim();
       if (c.plain) h += '<th class="' + cls + '" scope="col">' + colLabel(c.key, c.label) + '</th>';
-      else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"' + (c.title ? ' title="' + c.title + '"' : '') + '><button type="button" class="sortbtn" data-sort="' + c.key + '"' + (c.title ? ' aria-label="' + c.title + '"' : '') + '>' + c.label + '<span class="arrow"></span></button></th>';
+      else h += '<th class="' + cls + '" scope="col" data-key="' + c.key + '"' + (c.title ? ' title="' + c.title + '"' : '') + '><button type="button" class="sortbtn" data-sort="' + c.key + '"' + (c.title ? ' aria-label="' + c.title + '"' : '') + '>' + c.label + '<span class="arrow"></span></button><span class="plabel">' + colLabel(c.key, c.label) + '</span></th>';
     });
     h += '<th class="plain" scope="col"><span style="position:absolute;left:-9999px">Actions</span></th>';
     els.head.innerHTML = h;

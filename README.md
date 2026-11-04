@@ -32,6 +32,10 @@ The **Dashboard** link (top right of every list) opens a page with two lists. Bo
 
 Renaming a category or a person does not change records already saved; an old record keeps its old value and still shows it when edited. Table names: `app_categories` and `app_staff`.
 
+## Printing
+
+Print (or Save as PDF) from any of the three lists: the page is set to A4 landscape, every column is printed except Edit/Delete, the search bar, tabs and buttons are left out, and the column titles repeat at the top of every page.
+
 ## Files
 
 | File | Purpose |
