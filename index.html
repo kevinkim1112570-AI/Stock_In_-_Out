@@ -819,10 +819,15 @@ td.num { padding-left: 8px; padding-right: 8px; }
   }
 
   /* ---------- Filters and sorting ---------- */
+  /* A stock-out can never be "In stock", so the Stock OUT List drops that choice from its filter and its Status of Release. */
   function buildStatusFilter() {
-    els.statusFilter.innerHTML = '<option value="all">All statuses</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
-    $('f-status').innerHTML = STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
-    $('f-relstatus').innerHTML = '<option value="">Select a status</option>' + STATUSES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
+    var rel = STATUSES.filter(function (s) { return s !== 'In stock'; });
+    var opts = function (list) { return list.map(function (s) { return '<option>' + s + '</option>'; }).join(''); };
+    var forOut = cur === 'out';
+    els.statusFilter.innerHTML = '<option value="all">All statuses</option>' + opts(forOut ? rel : STATUSES);
+    els.statusFilter.value = 'all';
+    $('f-status').innerHTML = opts(STATUSES);
+    $('f-relstatus').innerHTML = '<option value="">Select a status</option>' + opts(rel);
   }
   els.q.addEventListener('input', function () { ui.q = els.q.value; render(); });
   els.statusFilter.addEventListener('change', function () { ui.status = els.statusFilter.value; render(); });
@@ -877,7 +882,7 @@ td.num { padding-left: 8px; padding-right: 8px; }
     $('addBtn').textContent = '+ Add ' + L.noun;
     document.body.classList.toggle('no-code', isHidden('categoryCode'));
     els.giftFilter.hidden = isHidden('giftable');
-    buildHead(); paintHead();
+    buildHead(); paintHead(); buildStatusFilter();
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
       t.setAttribute('aria-selected', t.getAttribute('data-list') === cur ? 'true' : 'false');
     });
