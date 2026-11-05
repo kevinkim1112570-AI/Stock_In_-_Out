@@ -199,7 +199,9 @@ textarea { min-height: 110px; resize: vertical; }
 @media (max-width: 560px) { .auth-card { padding: 24px 20px; } }
 .auth-card h1 { font-size: 28px; text-wrap: balance; }
 .auth-card .help { color: var(--ink-2); font-size: 15px; margin-top: -2px; }
-.auth-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.auth-actions { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
+.auth-actions #authBtn { width: 100%; }
+.auth-actions #signUpBtn { align-self: center; }
 .ok { margin: 0; font-size: 15px; color: var(--ink); }
 .ok:empty { display: none; }
 .field select { width: 100%; }
@@ -389,8 +391,8 @@ th .plabel { display: none; }
 <div class="auth" id="auth" hidden>
   <form class="auth-card" id="authForm" novalidate>
     <div>
-      <h1>Sign in to your team stock list</h1>
-      <p class="sub">Use your team email. New here? Create an account with the same fields.</p>
+      <h1>Stock IN/Out List</h1>
+      <p class="sub">Sign in with your team account.</p>
     </div>
     <div class="field">
       <label for="a-email">Email</label>
@@ -404,8 +406,8 @@ th .plabel { display: none; }
     <p class="err" id="authErr" role="alert"></p>
     <p class="ok" id="authOk" role="status"></p>
     <div class="auth-actions">
-      <button type="button" class="btn" id="signUpBtn">Create account</button>
       <button type="submit" class="btn primary" id="authBtn">Sign in</button>
+      <button type="button" class="linkbtn" id="signUpBtn">Create Account</button>
     </div>
   </form>
 </div>
@@ -1291,7 +1293,7 @@ th .plabel { display: none; }
     var up = $('signUpBtn'), inn = $('authBtn');
     up.disabled = true; inn.disabled = true; up.textContent = 'Creating…';
     var res = await sb.auth.signUp({ email: email, password: pw, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
-    up.disabled = false; inn.disabled = false; up.textContent = 'Create account';
+    up.disabled = false; inn.disabled = false; up.textContent = 'Create Account';
     if (res.error) {
       var m = res.error.message || '';
       err.textContent = /already/i.test(m) ? 'This email already has an account. Use Sign in.'
