@@ -32,6 +32,13 @@ The **Dashboard** link (top right of every list) opens a page with two lists. Bo
 
 Renaming a category or a person does not change the name saved in existing records (changing a code does update their Category Codes); an old record keeps its old value and still shows it when edited. Table names: `app_categories` and `app_staff`.
 
+## Accounts, Read Only and Admin
+
+- New accounts start as **Read Only**: they can see every list but cannot add, edit or delete anything (the buttons are hidden, and the database refuses changes too).
+- The **Admin** link on the sign-in page opens the Admin page after the admin password is entered. It lists every account with **Read Only** / **Edit Access** ticks. **Edit** sets a new password and switches the account between Read Only and Edit Access. **Delete** removes the account, which cannot sign in again and loses access straight away.
+- Passwords are stored scrambled by Supabase, so the Admin page cannot show them (it shows dots). Edit sets a new one.
+- The admin password is stored only as the `ADMIN_PASSWORD` secret of the `admin-users` edge function (Supabase dashboard, Edge Functions, Secrets). Five wrong tries lock the Admin page for 15 minutes. Never put the password in `index.html`.
+
 ## Printing
 
 Print (or Save as PDF) from any of the three lists: the page is set to A4 landscape, every column is printed except Edit/Delete, the search bar, tabs and buttons are left out, and the column titles repeat at the top of every page.

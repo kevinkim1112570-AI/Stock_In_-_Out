@@ -292,3 +292,18 @@ alter table public.app_categories
 -- (GP1 -> GD1, and on Stock OUT GPr1 -> GDr1).
 -- See the migration for the full sync_category_codes() function and trigger
 -- app_categories_sync_codes (after insert or update of name, code).
+
+-- ---------------------------------------------------------------------------
+-- Accounts: Read Only / Edit Access, and the Admin page (migration
+-- account_roles_read_only_edit_access).
+--   app_user_roles(user_id, can_edit)  one row per account; new accounts start Read Only
+--   is_member()  true if the signed-in user still has an account row (deleted users lose access at once)
+--   can_edit()   true if that row has can_edit = true
+--   Policies on stock_in, stock_in_unnumbered, stock_out, app_categories and app_staff:
+--     select -> is_member(); insert/update/delete -> can_edit()
+--   admin_login_attempts: counts wrong Admin passwords (5 wrong = locked 15 minutes);
+--     only the edge function can touch it.
+-- The Admin page talks to the edge function supabase/functions/admin-users, which checks
+-- the ADMIN_PASSWORD secret and uses the service role key to list, update and delete accounts.
+-- The Admin password is NOT in this repo or in index.html.
+-- ---------------------------------------------------------------------------

@@ -201,7 +201,8 @@ textarea { min-height: 110px; resize: vertical; }
 .auth-card .help { color: var(--ink-2); font-size: 15px; margin-top: -2px; }
 .auth-actions { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
 .auth-actions #authBtn { width: 100%; }
-.auth-actions #signUpBtn { align-self: center; }
+.auth-links { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.auth-links #adminBtn { justify-self: end; }
 .ok { margin: 0; font-size: 15px; color: var(--ink); }
 .ok:empty { display: none; }
 .field select { width: 100%; }
@@ -385,6 +386,21 @@ th .plabel { display: none; }
 .pal-act:hover { background: #eceef0; }
 .palette input[type="color"] { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
 @media print { .palette { display: none !important; } }
+/* Admin page and read-only accounts */
+.vh { position: absolute; left: -9999px; }
+#adminGate { max-width: 440px; }
+.admintab td { padding: 12px 14px; text-align: center; font-size: 17px; background: var(--field); }
+.admintab td.em { text-align: left; font-weight: 500; word-break: break-all; }
+.admintab td.pw { color: var(--ink-2); letter-spacing: 0.15em; }
+.admintab .tick { font-size: 22px; line-height: 1; }
+.admintab input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+.admintab input[type="text"], .admintab input[type="password"] { width: 100%; min-width: 150px; padding: 8px 10px; font-size: 16px; }
+.admintab td.acts { white-space: nowrap; }
+.admintab td.acts .linkbtn + .linkbtn { margin-left: 14px; }
+.badge-ro { display: none; font-size: 14px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+body.ro .badge-ro { display: inline-block; }
+body.ro #addBtn, body.ro td.actions, body.ro #app thead th:last-child, body.ro #catSave, body.ro #staffSave { display: none !important; }
+body.ro .swatch { pointer-events: none; }
 </style>
 </head>
 <body>
@@ -407,7 +423,11 @@ th .plabel { display: none; }
     <p class="ok" id="authOk" role="status"></p>
     <div class="auth-actions">
       <button type="submit" class="btn primary" id="authBtn">Sign in</button>
-      <button type="button" class="linkbtn" id="signUpBtn">Create Account</button>
+      <div class="auth-links">
+        <span></span>
+        <button type="button" class="linkbtn" id="signUpBtn">Create Account</button>
+        <button type="button" class="linkbtn" id="adminBtn">Admin</button>
+      </div>
     </div>
   </form>
 </div>
@@ -420,6 +440,7 @@ th .plabel { display: none; }
     </div>
     <div class="top-actions">
       <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
+      <span class="badge-ro" id="roBadge">Read only</span>
       <span class="who" id="who"></span>
       <button type="button" class="linkbtn" id="signOut">Sign out</button>
       <button type="button" class="linkbtn" id="menuBtn">Dashboard</button>
@@ -457,6 +478,36 @@ th .plabel { display: none; }
     </table>
     <div class="empty" id="empty" hidden></div>
   </div>
+</div>
+
+<div class="wrap" id="admin" hidden>
+  <header class="top">
+    <div>
+      <h1>Admin</h1>
+      <p class="sub">Every account that has been created.</p>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="linkbtn" id="adminBack">&larr; Back to sign in</button>
+    </div>
+  </header>
+  <form class="auth-card" id="adminGate" novalidate>
+    <div class="field">
+      <label for="adm-pass">Admin password</label>
+      <input id="adm-pass" type="password" autocomplete="off">
+    </div>
+    <p class="err" id="adminErr" role="alert"></p>
+    <button type="submit" class="btn primary" id="adminEnter">Enter</button>
+  </form>
+  <section class="panel" id="adminPanel" hidden>
+    <div class="grid-scroll">
+      <table class="gridtab admintab">
+        <thead><tr><th scope="col">Account Email</th><th scope="col">Password</th><th scope="col">Read Only</th><th scope="col">Edit Access</th><th scope="col"><span class="vh">Actions</span></th></tr></thead>
+        <tbody id="adminBody"></tbody>
+      </table>
+    </div>
+    <p class="err" id="adminListErr" role="alert"></p>
+    <p class="hint" id="adminHint">Passwords are stored in scrambled form and cannot be shown. Use Edit to set a new password.</p>
+  </section>
 </div>
 
 <div class="wrap" id="dash" hidden>
@@ -1236,6 +1287,127 @@ th .plabel { display: none; }
     if (k !== cur) switchList(k);
   });
 
+
+  /* ---------- Read Only / Edit Access ---------- */
+  var role = { canEdit: false };
+  function applyRole() {
+    document.body.classList.toggle('ro', !role.canEdit);
+    Array.prototype.forEach.call(document.querySelectorAll('#dash .cellinput'), function (i) { i.readOnly = !role.canEdit; });
+    if (!role.canEdit) closePalette(false);
+  }
+  async function loadRole() {
+    if (!sb || !ui.userId) return;
+    var res;
+    try { res = await sb.from('app_user_roles').select('can_edit').eq('user_id', ui.userId).maybeSingle(); } catch (e) { return; }
+    if (res.error) return;
+    if (!res.data) { forceSignOut('This account has been removed.'); return; }
+    role.canEdit = res.data.can_edit === true;
+    applyRole();
+  }
+  window.addEventListener('focus', function () { if (ui.userId) loadRole(); });
+
+  /* ---------- Admin page ---------- */
+  var admin = { pw: '', users: [], editing: null, pendingDelete: null, timer: null };
+  async function adminCall(payload) {
+    var res;
+    try {
+      res = await fetch(SUPABASE_URL + '/functions/v1/admin-users', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
+        body: JSON.stringify(Object.assign({ password: admin.pw }, payload))
+      });
+    } catch (e) { return { status: 0, data: {} }; }
+    var data = {}; try { data = await res.json(); } catch (e) {}
+    return { status: res.status, data: data };
+  }
+  function openAdmin() {
+    els.auth.hidden = true; $('admin').hidden = false;
+    admin.pw = ''; admin.users = []; admin.editing = null; admin.pendingDelete = null;
+    $('adminPanel').hidden = true; $('adminGate').hidden = false; $('adminErr').textContent = ''; $('adm-pass').value = '';
+    setTimeout(function () { $('adm-pass').focus(); }, 0);
+  }
+  function closeAdmin() {
+    $('admin').hidden = true; admin.pw = ''; admin.users = []; $('adminBody').innerHTML = '';
+    els.auth.hidden = false; setTimeout(function () { $('a-email').focus(); }, 0);
+  }
+  $('adminBtn').addEventListener('click', openAdmin);
+  $('adminBack').addEventListener('click', closeAdmin);
+  function adminProblem(r) {
+    if (r.status === 401) return 'Wrong admin password.' + (r.data.left ? ' ' + r.data.left + ' tries left.' : '');
+    if (r.status === 429) return 'Too many wrong tries. Try again in 15 minutes.';
+    if (r.data && r.data.error === 'not_configured') return 'Admin is not set up yet.';
+    if (r.status === 0) return 'Could not reach the server. Check your connection.';
+    return 'Something went wrong. Try again.';
+  }
+  $('adminGate').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var pw = $('adm-pass').value;
+    if (!pw) { $('adminErr').textContent = 'Enter the admin password.'; return; }
+    var btn = $('adminEnter'); btn.disabled = true; btn.textContent = 'Checking…';
+    admin.pw = pw;
+    var r = await adminCall({ action: 'list' });
+    btn.disabled = false; btn.textContent = 'Enter';
+    if (r.status !== 200) { admin.pw = ''; $('adminErr').textContent = adminProblem(r); $('adm-pass').value = ''; return; }
+    $('adm-pass').value = ''; $('adminErr').textContent = '';
+    admin.users = r.data.users || [];
+    $('adminGate').hidden = true; $('adminPanel').hidden = false;
+    renderAdmin();
+  });
+  async function reloadAdmin() {
+    var r = await adminCall({ action: 'list' });
+    if (r.status === 200) { admin.users = r.data.users || []; renderAdmin(); }
+    else $('adminListErr').textContent = adminProblem(r);
+  }
+  function renderAdmin() {
+    $('adminListErr').textContent = '';
+    $('adminBody').innerHTML = admin.users.length ? admin.users.map(function (u) {
+      var tick = function (on) { return '<span class="tick" aria-label="' + (on ? 'yes' : 'no') + '">' + (on ? '&#10003;' : '&#9744;') + '</span>'; };
+      if (admin.editing === u.id) {
+        return '<tr data-id="' + esc(u.id) + '"><td class="em">' + esc(u.email) + '</td>' +
+          '<td><input type="password" id="adm-new" placeholder="New password" autocomplete="new-password" aria-label="New password for ' + esc(u.email) + '"></td>' +
+          '<td><input type="checkbox" id="adm-ro" aria-label="Read Only"' + (u.can_edit ? '' : ' checked') + '></td>' +
+          '<td><input type="checkbox" id="adm-ed" aria-label="Edit Access"' + (u.can_edit ? ' checked' : '') + '></td>' +
+          '<td class="acts"><button type="button" class="linkbtn" data-a="save">Save</button><button type="button" class="linkbtn" data-a="cancel">Cancel</button></td></tr>';
+      }
+      var armed = admin.pendingDelete === u.id;
+      return '<tr data-id="' + esc(u.id) + '"><td class="em">' + esc(u.email) + '</td><td class="pw" title="Passwords cannot be shown. Use Edit to set a new one.">••••••••</td>' +
+        '<td>' + tick(!u.can_edit) + '</td><td>' + tick(u.can_edit) + '</td>' +
+        '<td class="acts"><button type="button" class="linkbtn" data-a="edit">Edit</button>' +
+        '<button type="button" class="linkbtn' + (armed ? ' danger-arm' : '') + '" data-a="del">' + (armed ? 'Confirm delete' : 'Delete') + '</button></td></tr>';
+    }).join('') : '<tr><td colspan="5">No accounts yet.</td></tr>';
+  }
+  $('adminBody').addEventListener('change', function (e) {
+    if (e.target.id === 'adm-ro') $('adm-ed').checked = !e.target.checked;
+    if (e.target.id === 'adm-ed') $('adm-ro').checked = !e.target.checked;
+  });
+  $('adminBody').addEventListener('click', async function (e) {
+    var b = e.target.closest('button[data-a]'); if (!b) return;
+    var id = b.closest('tr').getAttribute('data-id'), a = b.getAttribute('data-a');
+    $('adminListErr').textContent = '';
+    if (a === 'edit') { admin.editing = id; admin.pendingDelete = null; renderAdmin(); $('adm-new').focus(); return; }
+    if (a === 'cancel') { admin.editing = null; renderAdmin(); return; }
+    if (a === 'save') {
+      var np = $('adm-new').value;
+      if (np && np.length < 6) { $('adminListErr').textContent = 'Use a password with 6 or more characters.'; return; }
+      var payload = { action: 'update', user_id: id, can_edit: $('adm-ed').checked };
+      if (np) payload.new_password = np;
+      b.disabled = true;
+      var r = await adminCall(payload);
+      if (r.status !== 200) { b.disabled = false; $('adminListErr').textContent = r.status === 401 ? adminProblem(r) : 'Could not save. Try again.'; return; }
+      admin.editing = null; await reloadAdmin(); return;
+    }
+    if (a === 'del') {
+      if (admin.pendingDelete === id) {
+        clearTimeout(admin.timer); admin.pendingDelete = null;
+        var d = await adminCall({ action: 'delete', user_id: id });
+        if (d.status !== 200) { $('adminListErr').textContent = 'Could not delete. Try again.'; renderAdmin(); return; }
+        await reloadAdmin();
+      } else {
+        admin.pendingDelete = id; renderAdmin();
+        clearTimeout(admin.timer); admin.timer = setTimeout(function () { admin.pendingDelete = null; renderAdmin(); }, 4000);
+      }
+    }
+  });
+
   /* ---------- Sign in and out ---------- */
   function showApp() { els.auth.hidden = true; applyView(); }
   function showAuth() {
@@ -1253,13 +1425,14 @@ th .plabel { display: none; }
         cur = listFromHash();
         applyListUI();
         subscribe();
-        await Promise.all([loadConfig(), loadAll(cur)]);
+        role.canEdit = false; applyRole();
+        await Promise.all([loadRole(), loadConfig(), loadAll(cur)]);
       }
     } else {
       ui.userId = null;
       unsubscribe();
       Object.keys(lists).forEach(function (k) { lists[k].records = []; lists[k].loaded = false; });
-      cfg.categories = []; cfg.staff = []; dash.dirty = false;
+      cfg.categories = []; cfg.staff = []; dash.dirty = false; role.canEdit = false; applyRole();
       showAuth();
     }
   }
@@ -1310,7 +1483,7 @@ th .plabel { display: none; }
   });
   /* Sign out must always end on the sign-in screen, even if the server or the network is slow. */
   var signingOut = false;
-  $('signOut').addEventListener('click', async function () {
+  async function forceSignOut(message) {
     if (signingOut) return;
     signingOut = true;
     var btn = $('signOut'); btn.textContent = 'Signing out…';
@@ -1329,7 +1502,9 @@ th .plabel { display: none; }
     btn.textContent = 'Sign out'; signingOut = false;
     window.location.hash = '';
     await handleSession(null);
-  });
+    if (message) $('authErr').textContent = message;
+  }
+  $('signOut').addEventListener('click', function () { forceSignOut(''); });
 
   /* ---------- Row actions ---------- */
   els.body.addEventListener('click', async function (e) {
