@@ -1306,7 +1306,28 @@ th .plabel { display: none; }
     if (user && user.identities && user.identities.length === 0) { err.textContent = 'This email already has an account. Use Sign in.'; return; }
     ok.textContent = 'Account created. Check your email for a confirmation link, then sign in.';
   });
-  $('signOut').addEventListener('click', async function () { if (sb) await sb.auth.signOut(); });
+  /* Sign out must always end on the sign-in screen, even if the server or the network is slow. */
+  var signingOut = false;
+  $('signOut').addEventListener('click', async function () {
+    if (signingOut) return;
+    signingOut = true;
+    var btn = $('signOut'); btn.textContent = 'Signing out…';
+    try {
+      if (sb) {
+        var wait = function (ms) { return new Promise(function (res) { setTimeout(res, ms); }); };
+        await Promise.race([sb.auth.signOut(), wait(3000)]);
+        try { await Promise.race([sb.auth.signOut({ scope: 'local' }), wait(1500)]); } catch (e) {}
+      }
+    } catch (e) {}
+    try {
+      [window.localStorage, window.sessionStorage].forEach(function (st) {
+        Object.keys(st).filter(function (k) { return /^sb-.*-auth-token/.test(k); }).forEach(function (k) { st.removeItem(k); });
+      });
+    } catch (e) {}
+    btn.textContent = 'Sign out'; signingOut = false;
+    window.location.hash = '';
+    await handleSession(null);
+  });
 
   /* ---------- Row actions ---------- */
   els.body.addEventListener('click', async function (e) {
