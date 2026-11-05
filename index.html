@@ -401,6 +401,12 @@ th .plabel { display: none; }
 body.ro .badge-ro { display: inline-block; }
 body.ro #addBtn, body.ro td.actions, body.ro #app thead th:last-child, body.ro #catSave, body.ro #staffSave { display: none !important; }
 body.ro .swatch { pointer-events: none; }
+.notice-wrap { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(27, 31, 35, 0.45); }
+.notice { width: min(440px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 28px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
+.notice h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.notice p { margin: 0; color: var(--ink-2); font-size: 17px; }
+.notice .btn { align-self: flex-end; min-width: 96px; }
+@media print { .notice-wrap { display: none !important; } }
 </style>
 </head>
 <body>
@@ -546,6 +552,13 @@ body.ro .swatch { pointer-events: none; }
   </div>
 </div>
 
+<div class="notice-wrap" id="roNotice" hidden>
+  <div class="notice" role="alertdialog" aria-modal="true" aria-labelledby="roTitle" aria-describedby="roText">
+    <h2 id="roTitle">Your account is Read Only</h2>
+    <p id="roText">You can view every list, but you cannot add, edit or delete anything. To get Edit Access, ask the admin.</p>
+    <button type="button" class="btn primary" id="roOk">OK</button>
+  </div>
+</div>
 <div class="palette" id="palette" role="dialog" aria-label="Choose a color" hidden></div>
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden>
@@ -1289,7 +1302,7 @@ body.ro .swatch { pointer-events: none; }
 
 
   /* ---------- Read Only / Edit Access ---------- */
-  var role = { canEdit: false };
+  var role = { canEdit: false, told: false };
   function applyRole() {
     document.body.classList.toggle('ro', !role.canEdit);
     Array.prototype.forEach.call(document.querySelectorAll('#dash .cellinput'), function (i) { i.readOnly = !role.canEdit; });
@@ -1303,7 +1316,10 @@ body.ro .swatch { pointer-events: none; }
     if (!res.data) { forceSignOut('This account has been removed.'); return; }
     role.canEdit = res.data.can_edit === true;
     applyRole();
+    if (!role.canEdit && !role.told) { role.told = true; $('roNotice').hidden = false; $('roOk').focus(); }
   }
+  $('roOk').addEventListener('click', function () { $('roNotice').hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('roNotice').hidden) $('roNotice').hidden = true; });
   window.addEventListener('focus', function () { if (ui.userId) loadRole(); });
 
   /* ---------- Admin page ---------- */
@@ -1432,7 +1448,7 @@ body.ro .swatch { pointer-events: none; }
       ui.userId = null;
       unsubscribe();
       Object.keys(lists).forEach(function (k) { lists[k].records = []; lists[k].loaded = false; });
-      cfg.categories = []; cfg.staff = []; dash.dirty = false; role.canEdit = false; applyRole();
+      cfg.categories = []; cfg.staff = []; dash.dirty = false; role.canEdit = false; role.told = false; $('roNotice').hidden = true; applyRole();
       showAuth();
     }
   }
