@@ -349,7 +349,9 @@ th.c-relstatus .sortbtn { display: block; width: 100%; text-align: center; }
 /* Printing: A4 landscape, every column except Edit/Delete, header row repeated on each page */
 @page { size: A4 landscape; margin: 8mm; }
 th .plabel { display: none; }
+.printmeta { display: none; }
 @media print {
+  #app .printmeta { display: block; margin: 2px 0 0; font-size: 10px; color: #333; }
   th .sortbtn { display: none !important; }
   th .plabel { display: block; font-weight: 600; text-transform: uppercase; }
   :root { --pad-y: 0px; }
@@ -448,6 +450,7 @@ body.ro .swatch { pointer-events: none; }
     <div>
       <h1 id="listTitle">Stock <b class="em">IN</b> List</h1>
       <p class="sub" id="listSub">Every stock-in the team has recorded, shared live.</p>
+      <p class="printmeta" id="printMeta"></p>
     </div>
     <div class="top-actions">
       <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
@@ -934,6 +937,16 @@ body.ro .swatch { pointer-events: none; }
     syncCategoryFilter();
     fitDetails();
   }
+
+  /* Printed copies carry who printed them and when. */
+  var userEmail = '';
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function stampPrint() {
+    var d = new Date(), M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var t = d.getDate() + ' ' + M[d.getMonth()] + ' ' + d.getFullYear() + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    var el = $('printMeta'); if (el) el.textContent = (userEmail ? userEmail + '  ·  ' : '') + 'Printed ' + t;
+  }
+  window.addEventListener('beforeprint', stampPrint);
 
   /* ---------- Filters and sorting ---------- */
   /* A stock-out can never be "In stock", so the Stock OUT List drops that choice from its filter and its Status of Release. */
@@ -1439,6 +1452,7 @@ body.ro .swatch { pointer-events: none; }
   async function handleSession(session) {
     if (session && session.user) {
       $('who').textContent = session.user.email || '';
+      userEmail = session.user.email || '';
       if (ui.userId !== session.user.id) {
         ui.userId = session.user.id;
         view = String(window.location.hash || '').replace('#', '') === 'dashboard' ? 'dash' : 'lists';
