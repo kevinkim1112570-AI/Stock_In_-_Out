@@ -307,3 +307,7 @@ alter table public.app_categories
 -- the ADMIN_PASSWORD secret and uses the service role key to list, update and delete accounts.
 -- The Admin password is NOT in this repo or in index.html.
 -- ---------------------------------------------------------------------------
+
+-- Migration: allow_blank_date_and_purchaser
+-- Imported legacy rows may have no Date of Receipt / Purchaser, so those
+-- columns are nullable / may be empty. (Applied via Supabase migration.)

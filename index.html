@@ -733,7 +733,7 @@ body.ro .swatch { pointer-events: none; }
       inventoryId: r.inventory_id || '', releaseStatus: r.release_status || '', recipient: r.recipient || '',
       id: r.id, serial: r.serial_no, category: r.category, categoryCode: r.category_code || '',
       brand: r.brand_name, type: r.type_expression || '', purchaser: r.purchaser,
-      date: r.date_of_receipt, receiver: r.receiver, qty: r.quantity, unit: r.quantity_unit || '', storage: r.storage_code || '',
+      date: r.date_of_receipt || '', receiver: r.receiver, qty: r.quantity, unit: r.quantity_unit || '', storage: r.storage_code || '',
       giftable: r.giftable || 'Unknown', detail: r.detail || '', status: r.latest_status,
       createdAt: r.created_at || ''
     };
@@ -741,7 +741,7 @@ body.ro .swatch { pointer-events: none; }
   function toRow(d) {
     var o = {
       category: d.category, brand_name: d.brand,
-      type_expression: d.type, purchaser: d.purchaser, date_of_receipt: d.date, receiver: d.receiver,
+      type_expression: d.type, purchaser: d.purchaser, date_of_receipt: d.date || null, receiver: d.receiver,
       quantity: d.qty, quantity_unit: d.unit, storage_code: d.storage, giftable: d.giftable, detail: d.detail,
       latest_status: d.status
     };
@@ -768,7 +768,7 @@ body.ro .swatch { pointer-events: none; }
   }
   function fmtDate(s) {
     var p = String(s || '').split('-').map(Number);
-    if (!p[0]) return esc(s || '');
+    if (!p[0]) return s ? esc(s) : '<span class="none">—</span>';
     return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
   function todayISO() {
@@ -1627,10 +1627,11 @@ body.ro .swatch { pointer-events: none; }
       inventoryId: $('f-invid').value.trim(), releaseStatus: $('f-relstatus').value.trim(), recipient: $('f-recipient').value.trim()
     };
     var errs = {};
-    if (!d.date) errs.date = cur === 'out' ? 'Choose the date of release.' : 'Choose the date of receipt.';
+    var orig = ui.editingId ? state.records.filter(function (x) { return x.id === ui.editingId; })[0] : null; /* an old record that never had a date or purchaser can still be edited */
+    if (!d.date && !(orig && !orig.date)) errs.date = cur === 'out' ? 'Choose the date of release.' : 'Choose the date of receipt.';
     if (!d.category) errs.category = 'Choose a category.';
     if (!d.brand) errs.brand = 'Enter a brand name.';
-    if (!d.purchaser && !isHidden('purchaser')) errs.purchaser = 'Enter who bought it.';
+    if (!d.purchaser && !isHidden('purchaser') && !(orig && !orig.purchaser)) errs.purchaser = 'Enter who bought it.';
     if (!d.receiver) errs.receiver = cur === 'out' ? 'Choose who is in charge.' : 'Enter who received it.';
     if (!(d.qty >= 1)) errs.qty = 'Enter a quantity of 1 or more.';
     var keys = Object.keys(errs);
