@@ -351,7 +351,8 @@ th.c-relstatus .sortbtn { display: block; width: 100%; text-align: center; }
 th .plabel { display: none; }
 .printmeta { display: none; }
 @media print {
-  #app .printmeta { display: block; margin: 2px 0 0; font-size: 10px; color: #333; }
+  #app .top > div:first-child { display: flex !important; justify-content: space-between; align-items: baseline; gap: 12px; }
+  #app .printmeta { display: block; margin: 0; font-size: 10px; color: #333; white-space: nowrap; }
   th .sortbtn { display: none !important; }
   th .plabel { display: block; font-weight: 600; text-transform: uppercase; }
   :root { --pad-y: 0px; }
