@@ -125,11 +125,11 @@ th.num, td.num { text-align: right; }
 th.num .sortbtn { justify-content: flex-end; }
 td.num { font-variant-numeric: tabular-nums; font-weight: 500; }
 .mono { font-family: var(--font-mono); font-size: 16px; }
-.c-serial { position: sticky; left: 0; z-index: 1; font-family: var(--font-mono); font-size: 16px; font-weight: 500; white-space: nowrap; border-right: 1px solid var(--line); }
+.c-serial { position: sticky; left: 0; z-index: 1; font-family: var(--font-mono); font-size: 15px; font-weight: 500; white-space: nowrap; border-right: 1px solid var(--line); }
 thead th.c-serial { z-index: 3; left: 0; }
 td.nowrap { white-space: nowrap; }
-td.detail { width: 360px; min-width: 360px; color: var(--ink-2); font-size: 14px; }
-td.detail .dfit { display: block; overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; font-size: 14px; max-height: 61px; }
+td.detail { width: 360px; min-width: 360px; color: var(--ink-2); font-size: 13px; }
+td.detail .dfit { display: block; overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; font-size: 13px; max-height: 61px; }
 td.actions { white-space: nowrap; text-align: right; }
 td.actions .linkbtn + .linkbtn { margin-left: 14px; }
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; background: var(--hover); font-size: 15px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line); }
@@ -226,7 +226,7 @@ th.c-serial .arrow, th.c-code .arrow { margin-left: 6px; }
 .btn-pair #exportBtn { width: 56px; padding-left: 0; padding-right: 0; font-size: 16px; white-space: nowrap; }
 /* Category Code cell colors by prefix. Fixed colors, so the text stays dark in both themes. */
 /* Category Code: slightly stronger than the other text, centered, a clear white gap between colored cells */
-tbody tr td.c-code { text-align: center; font-size: 18px; font-weight: 600; padding: 8px 4px; border-bottom: 3px solid var(--field); }
+tbody tr td.c-code { text-align: center; font-size: 17px; font-weight: 600; padding: 8px 4px; border-bottom: 3px solid var(--field); }
 tbody tr:last-child td.c-code { border-bottom: 0; }
 td.c-code .cc-p { margin-right: 0.28em; }
 th.c-code .sortbtn { text-align: center; padding-left: 8px; }
@@ -236,9 +236,11 @@ th.ctr .sortbtn { justify-content: center; text-align: center; }
 /* Compact layout: narrower columns, a size smaller text, 3 lines for Brand and Type */
 tbody td { padding-top: 8px; padding-bottom: 8px; }
 tbody tr { height: 54px; }
-td.sm { font-size: 16px; }
-td.sm.mono { font-size: 15px; }
-td.detail.sm { font-size: 14px; }
+td.sm { font-size: 15px; }
+td.sm.mono { font-size: 14px; }
+td.c-cat, td.c-type { font-size: 16px; }
+td.c-brand { font-weight: 700; }
+td.detail.sm { font-size: 13px; }
 .clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; }
 th.plain.c-detail { width: 360px; min-width: 360px; }
 th.c-brand, td.c-brand { width: 210px; min-width: 210px; }
