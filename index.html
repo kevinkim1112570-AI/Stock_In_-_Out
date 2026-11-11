@@ -191,6 +191,10 @@ textarea { min-height: 110px; resize: vertical; }
 .live.on i { background: var(--accent); opacity: 1; }
 .auth { position: fixed; inset: 0; z-index: 5; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: #fff url("login-bg.jpg") center center / cover no-repeat; }
 .auth[hidden] { display: none; }
+.auth.alt { background: var(--bg); gap: 72px; padding-right: 24px; }
+.auth-art { display: none; }
+.auth.alt .auth-art { display: block; width: min(380px, 34vw); height: auto; flex: 0 0 auto; user-select: none; pointer-events: none; }
+@media (max-width: 900px) { .auth.alt .auth-art { display: none; } .auth.alt { padding-right: 16px; } }
 .auth-card { flex: 0 1 440px; box-shadow: 0 12px 40px rgba(30, 70, 110, 0.22); }
 .auth-card { width: min(440px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 32px; display: flex; flex-direction: column; gap: 20px; }
 .auth-card h1 { font-size: 30px; }
@@ -478,6 +482,7 @@ body.ro .swatch { pointer-events: none; }
       <div class="auth-links"><button type="button" class="linkbtn" id="altBack">Back to Sign in</button></div>
     </div>
   </form>
+  <img class="auth-art" src="login-art.png" alt="" width="380" height="380">
 </div>
 
 <div class="wrap" id="app" hidden>
@@ -1481,7 +1486,7 @@ body.ro .swatch { pointer-events: none; }
   function showAuth() {
     els.drawer.hidden = true; els.scrim.hidden = true;
     els.app.hidden = true; $('dash').hidden = true; els.auth.hidden = false;
-    $('altForm').hidden = true; $('authForm').hidden = false;
+    $('altForm').hidden = true; $('authForm').hidden = false; els.auth.classList.remove('alt');
     setTimeout(function () { $('a-email').focus(); }, 0);
   }
   async function handleSession(session) {
@@ -1531,7 +1536,7 @@ body.ro .swatch { pointer-events: none; }
   var altBusy = false;
   function altSet(busy) { altBusy = busy; $('altBtn').disabled = busy; $('altBack').disabled = busy; }
   function altShow(email) {
-    $('authForm').hidden = true; $('altForm').hidden = false;
+    $('authForm').hidden = true; $('altForm').hidden = false; els.auth.classList.add('alt');
     $('altErr').textContent = ''; $('altOk').textContent = '';
     $('altTitle').textContent = 'Create Account';
     $('altSub').textContent = 'Create an account. Confirm it from the email we send you. Your account is Read Only until the Admin gives you Edit Access.';
@@ -1541,7 +1546,7 @@ body.ro .swatch { pointer-events: none; }
     setTimeout(function () { $('alt-email').focus(); }, 0);
   }
   function backToSignIn(email, note) {
-    $('altForm').hidden = true; $('authForm').hidden = false;
+    $('altForm').hidden = true; $('authForm').hidden = false; els.auth.classList.remove('alt');
     $('authErr').textContent = ''; $('authOk').textContent = note || '';
     if (email) $('a-email').value = email;
     $('a-pass').value = '';
