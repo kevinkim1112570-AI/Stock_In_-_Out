@@ -311,3 +311,25 @@ alter table public.app_categories
 -- Migration: allow_blank_date_and_purchaser
 -- Imported legacy rows may have no Date of Receipt / Purchaser, so those
 -- columns are nullable / may be empty. (Applied via Supabase migration.)
+
+-- Migration: password_reset_otps
+-- Forgot Password. The Edge Function `password-reset` (service role) makes a 6-character OTP (A-Z, 0-9),
+-- stores only its hash here and emails it through Resend; the OTP works once, expires in 10 minutes and
+-- is locked after 5 wrong tries. Secrets: RESEND_API_KEY, RESEND_FROM (e.g. "Stock In/Out List <noreply@yourdomain.com>").
+create table if not exists public.password_reset_otps (
+  email text primary key,
+  otp_hash text not null,
+  expires_at timestamptz not null,
+  attempts int not null default 0,
+  last_sent_at timestamptz not null default now(),
+  window_start timestamptz not null default now(),
+  sent_count int not null default 1
+);
+alter table public.password_reset_otps enable row level security;
+revoke all on public.password_reset_otps from anon, authenticated;
+create or replace function public.pr_find_user(p_email text)
+returns uuid language sql stable security definer set search_path = '' as $$
+  select id from auth.users where lower(email) = lower(p_email) and email_confirmed_at is not null limit 1
+$$;
+revoke execute on function public.pr_find_user(text) from public, anon, authenticated;
+grant execute on function public.pr_find_user(text) to service_role;
