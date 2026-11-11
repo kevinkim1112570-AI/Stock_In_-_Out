@@ -189,7 +189,10 @@ textarea { min-height: 110px; resize: vertical; }
 .live { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--ink-2); }
 .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-2); opacity: 0.5; display: inline-block; }
 .live.on i { background: var(--accent); opacity: 1; }
-.auth { min-height: calc(100vh - 100px); display: grid; place-items: center; }
+.auth { min-height: calc(100vh - 100px); display: flex; align-items: center; justify-content: center; gap: 72px; padding-right: 24px; }
+.auth-card { flex: 0 1 440px; }
+.auth-art { width: min(380px, 34vw); height: auto; flex: 0 0 auto; user-select: none; pointer-events: none; }
+@media (max-width: 900px) { .auth-art { display: none; } .auth { padding-right: 0; } }
 .auth-card { width: min(440px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 32px; display: flex; flex-direction: column; gap: 20px; }
 .auth-card h1 { font-size: 30px; }
 .auth .hint { margin: 0; color: var(--ink-2); font-size: 15px; }
@@ -476,6 +479,7 @@ body.ro .swatch { pointer-events: none; }
       <div class="auth-links"><button type="button" class="linkbtn" id="altBack">Back to Sign in</button></div>
     </div>
   </form>
+  <img class="auth-art" src="login-art.png" alt="" width="380" height="380">
 </div>
 
 <div class="wrap" id="app" hidden>
