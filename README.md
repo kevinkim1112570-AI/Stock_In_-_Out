@@ -77,8 +77,7 @@ Every push to `main` redeploys the site.
 
 The Supabase URL and publishable key are in `index.html` on purpose. The publishable key is designed to be public. The security comes from row level security in `supabase/schema.sql`, which blocks anyone who is not signed in. Never put a secret or service role key in this repo.
 
-## Create Account and Forgot Password
+## Create Account
 
 - **Create Account** opens a card with Email, Password and Confirm password. Press and hold the eye button to see what you typed. The account must be confirmed from the email Supabase sends; new accounts are always Read Only until the Admin ticks Edit Access.
-- **Forgot Password** (left of Create Account) asks for the account email, emails a 6-character OTP (letters and numbers, works once, 10 minutes), then shows a card with the email locked, the OTP, and the new password twice. It runs through the Edge Function `password-reset` and needs the secrets `RESEND_API_KEY` and `RESEND_FROM`.
 - Read Only accounts see a small red "(Read Only)" after the list title.

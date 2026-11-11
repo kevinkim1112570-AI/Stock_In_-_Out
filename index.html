@@ -203,13 +203,10 @@ textarea { min-height: 110px; resize: vertical; }
 .auth-actions #authBtn { width: 100%; }
 .auth-links { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
 .auth-links #adminBtn { justify-self: end; }
-.auth-links #forgotBtn { justify-self: start; font-size: 14px; }
 .pwrow { position: relative; display: block; }
 .pwrow input { padding-right: 50px; }
 .eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; display: grid; place-items: center; background: none; border: 0; border-radius: 6px; color: var(--ink-2); cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .eye:hover, .eye.on { color: var(--accent); }
-#alt-email[readonly] { font-family: inherit; font-size: 18px; }
-#alt-otp { font-family: var(--font-mono); letter-spacing: 0.25em; text-transform: uppercase; }
 .ro-title { display: none; font-size: 0.3333em; font-weight: 600; letter-spacing: 0; color: #D32F2F; margin-left: 0.7em; white-space: nowrap; vertical-align: baseline; }
 body.ro .ro-title { display: inline; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ro-title { color: #F0686C; } }
@@ -449,7 +446,7 @@ body.ro .swatch { pointer-events: none; }
     <div class="auth-actions">
       <button type="submit" class="btn primary" id="authBtn">Sign in</button>
       <div class="auth-links">
-        <button type="button" class="linkbtn" id="forgotBtn">Forgot Password</button>
+        <span></span>
         <button type="button" class="linkbtn" id="signUpBtn">Create Account</button>
         <button type="button" class="linkbtn" id="adminBtn">Admin</button>
       </div>
@@ -463,11 +460,6 @@ body.ro .swatch { pointer-events: none; }
     <div class="field">
       <label for="alt-email">Email</label>
       <input id="alt-email" type="email" placeholder="name@company.com" autocomplete="username" inputmode="email">
-    </div>
-    <div class="field" id="altOtpRow" hidden>
-      <label for="alt-otp">OTP</label>
-      <span class="help">6 letters and numbers, from the email we sent you</span>
-      <input id="alt-otp" maxlength="6" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false">
     </div>
     <div class="field" id="altPwRow">
       <label for="alt-pass">Password</label>
@@ -1533,32 +1525,18 @@ body.ro .swatch { pointer-events: none; }
     }
     $('a-pass').value = '';
   });
-  /* ---------- Create account / Forgot password ---------- */
-  var altMode = 'signup', altBusy = false;
-  function resetCall(payload) {
-    return fetch(SUPABASE_URL + '/functions/v1/password-reset', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY }, body: JSON.stringify(payload)
-    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-      .catch(function () { return { ok: false, j: { error: 'network' } }; });
-  }
-  function altSet(busy) {
-    altBusy = busy; $('altBtn').disabled = busy; $('altBack').disabled = busy;
-  }
-  function altShow(mode, email, note) {
-    altMode = mode;
+  /* ---------- Create account ---------- */
+  var altBusy = false;
+  function altSet(busy) { altBusy = busy; $('altBtn').disabled = busy; $('altBack').disabled = busy; }
+  function altShow(email) {
     $('authForm').hidden = true; $('altForm').hidden = false;
-    $('altErr').textContent = ''; $('altOk').textContent = note || '';
-    var reset = mode === 'reset', forgot = mode === 'forgot';
-    $('altTitle').textContent = forgot ? 'Forgot Password' : reset ? 'Choose a new password' : 'Create Account';
-    $('altSub').textContent = forgot ? 'Enter the email of your account. We will send you an OTP.'
-      : reset ? 'Enter the OTP from the email, then choose a new password.'
-      : 'Create an account. Confirm it from the email we send you. Your account is Read Only until the Admin gives you Edit Access.';
-    $('altOtpRow').hidden = !reset; $('altPwRow').hidden = forgot; $('altPw2Row').hidden = forgot;
-    $('alt-email').value = email || ''; $('alt-email').readOnly = reset;
-    $('alt-otp').value = ''; $('alt-pass').value = ''; $('alt-pass2').value = '';
-    $('altBtn').textContent = forgot ? 'OK' : reset ? 'Change Password' : 'Create Account';
+    $('altErr').textContent = ''; $('altOk').textContent = '';
+    $('altTitle').textContent = 'Create Account';
+    $('altSub').textContent = 'Create an account. Confirm it from the email we send you. Your account is Read Only until the Admin gives you Edit Access.';
+    $('alt-email').value = email || ''; $('alt-pass').value = ''; $('alt-pass2').value = '';
+    $('altBtn').textContent = 'Create Account';
     altSet(false);
-    setTimeout(function () { (reset ? $('alt-otp') : $('alt-email')).focus(); }, 0);
+    setTimeout(function () { $('alt-email').focus(); }, 0);
   }
   function backToSignIn(email, note) {
     $('altForm').hidden = true; $('authForm').hidden = false;
@@ -1567,8 +1545,7 @@ body.ro .swatch { pointer-events: none; }
     $('a-pass').value = '';
     setTimeout(function () { (email ? $('a-pass') : $('a-email')).focus(); }, 0);
   }
-  $('signUpBtn').addEventListener('click', function () { altShow('signup', $('a-email').value.trim()); });
-  $('forgotBtn').addEventListener('click', function () { altShow('forgot', $('a-email').value.trim()); });
+  $('signUpBtn').addEventListener('click', function () { altShow($('a-email').value.trim()); });
   $('altBack').addEventListener('click', function () { backToSignIn($('alt-email').value.trim()); });
   $('altForm').addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -1576,39 +1553,9 @@ body.ro .swatch { pointer-events: none; }
     var err = $('altErr'); err.textContent = ''; $('altOk').textContent = '';
     var email = $('alt-email').value.trim(), pw = $('alt-pass').value, pw2 = $('alt-pass2').value;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Enter a valid email address.'; return; }
-    if (altMode === 'forgot') {
-      altSet(true); $('altBtn').textContent = 'Sending…';
-      var r = await resetCall({ action: 'request', email: email });
-      if (!r.ok) {
-        var c = r.j && r.j.error;
-        err.textContent = c === 'no_account' ? 'No account uses this email. Enter the email you registered with.'
-          : c === 'wait' ? 'Wait ' + (r.j.seconds || 60) + ' seconds before asking for another OTP.'
-          : c === 'too_many' ? 'Too many OTP requests. Try again in an hour.'
-          : c === 'not_configured' ? 'The email service is not set up yet. Ask the Admin.'
-          : c === 'send_failed' ? 'Could not send the email. Try again later.'
-          : 'Could not reach the server. Check your connection and try again.';
-        altSet(false); $('altBtn').textContent = 'OK'; return;
-      }
-      altShow('reset', email.toLowerCase(), 'We sent an OTP to ' + email + '. It works once and expires in 10 minutes.');
-      return;
-    }
-    if (altMode === 'reset' && !/^[A-Za-z0-9]{6}$/.test($('alt-otp').value.trim())) { err.textContent = 'Enter the 6-character OTP from the email.'; return; }
     if (!pw || !pw2) { err.textContent = 'Enter the password twice.'; return; }
     if (pw.length < 6) { err.textContent = 'Use a password with 6 or more characters.'; return; }
     if (pw !== pw2) { err.textContent = 'The two passwords do not match.'; return; }
-    if (altMode === 'reset') {
-      altSet(true); $('altBtn').textContent = 'Saving…';
-      var q = await resetCall({ action: 'confirm', email: email, otp: $('alt-otp').value.trim(), password: pw });
-      if (!q.ok) {
-        var k = q.j && q.j.error;
-        err.textContent = k === 'invalid_otp' ? 'The OTP is wrong or has expired.' + (q.j.left !== undefined ? ' ' + q.j.left + ' tries left.' : '')
-          : k === 'weak_password' || k === 'short_password' ? 'Choose a stronger password with 6 or more characters.'
-          : 'Could not change the password. Check your connection and try again.';
-        altSet(false); $('altBtn').textContent = 'Change Password'; return;
-      }
-      backToSignIn(email, 'Password changed. Sign in with your new password.');
-      return;
-    }
     if (!sb) { err.textContent = 'The sign-in service did not load. Check your connection and reload the page.'; return; }
     altSet(true); $('altBtn').textContent = 'Creating…';
     var res = await sb.auth.signUp({ email: email, password: pw, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
